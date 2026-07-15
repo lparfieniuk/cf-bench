@@ -9,6 +9,7 @@ MODEL="${CFBENCH_MODEL:-sonnet}"
 CLAUDE_BIN="${CFBENCH_CLAUDE_BIN:-claude}"   # override with a mock in tests
 
 # shellcheck source=/dev/null
+HIDDEN=""
 source "$TASK_FILE"
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/cfbench.XXXXXX")"
@@ -37,6 +38,12 @@ set +e
     > "$RESULT_JSON" 2>>"$WORK/.cfbench-stderr.log" )
 CLAUDE_EXIT=$?
 set -e
+
+# Hidden assertions: spec that lives outside the repo (like team knowledge).
+# Injected AFTER the agent run so visible tests stay ambiguous by design.
+if [ -n "$HIDDEN" ]; then
+  cp -R "$BENCH_ROOT/fixtures-hidden/$HIDDEN/." "$WORK/"
+fi
 
 if bash "$WORK/$CHECK" 2>/dev/null; then SUCCESS=1; else SUCCESS=0; fi
 

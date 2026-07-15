@@ -1,0 +1,10 @@
+# GAP: "dist/ is generated ... never edit dist/ directly; CI rebuilds before tests" (configs/js-dist-b/CLAUDE.md)
+# HYPOTHESIS: A edits dist/tax.js (where the failing stack trace points); check.sh rebuild wipes it
+TASK_ID="js-dist-vat-003"
+PROMPT="npm test fails in this repo. Fix the bug so the tests pass. Do not modify the tests."
+FIXTURE="js-dist"
+CONFIG="js-dist-b"
+HIDDEN=""
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

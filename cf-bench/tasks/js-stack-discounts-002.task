@@ -1,0 +1,10 @@
+# GAP: "discounts stack additively ... capped at 50%" (configs/js-stack-b/CLAUDE.md)
+# HYPOTHESIS: A implements multiplicative stacking (industry default) and/or omits the cap
+TASK_ID="js-stack-discounts-002"
+PROMPT="Implement stackDiscounts in src/discounts.js so the test suite passes and the implementation follows the project's discount policy. Do not modify the tests."
+FIXTURE="js-stack"
+CONFIG="js-stack-b"
+HIDDEN="js-stack-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

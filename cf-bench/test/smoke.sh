@@ -35,4 +35,36 @@ ROW2=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-noop" \
   bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" A 1)
 echo "$ROW2" | cut -f6 | grep -qx 0                       || { echo "FAIL: noop agent should yield success=0"; FAIL=1; }
 
+# Hidden-assertion task: agent passing VISIBLE tests but violating the hidden
+# policy (multiplicative stacking, no cap) must yield success=0.
+cat > "$MOCK_DIR/claude-multiplicative" <<'EOF'
+#!/usr/bin/env bash
+cat > src/discounts.js <<'JS'
+export function stackDiscounts(price, percents) {
+  return percents.reduce((p, pct) => p * (1 - pct / 100), price);
+}
+JS
+echo '{"type":"result","num_turns":3,"duration_ms":1,"total_cost_usd":0.03,"terminal_reason":"completed","session_id":"mock-mult","usage":{}}'
+EOF
+chmod +x "$MOCK_DIR/claude-multiplicative"
+ROW3=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-multiplicative" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/js-stack-discounts-002.task" A 1)
+echo "$ROW3" | cut -f6 | grep -qx 0 || { echo "FAIL: multiplicative impl must fail hidden policy tests"; FAIL=1; }
+
+# Agent following the policy (additive + 50% cap) must yield success=1.
+cat > "$MOCK_DIR/claude-additive" <<'EOF'
+#!/usr/bin/env bash
+cat > src/discounts.js <<'JS'
+export function stackDiscounts(price, percents) {
+  const total = Math.min(percents.reduce((a, b) => a + b, 0), 50);
+  return price * (1 - total / 100);
+}
+JS
+echo '{"type":"result","num_turns":3,"duration_ms":1,"total_cost_usd":0.03,"terminal_reason":"completed","session_id":"mock-add","usage":{}}'
+EOF
+chmod +x "$MOCK_DIR/claude-additive"
+ROW4=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-additive" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/js-stack-discounts-002.task" B 1)
+echo "$ROW4" | cut -f6 | grep -qx 1 || { echo "FAIL: additive+cap impl must pass hidden policy tests"; FAIL=1; }
+
 [ "$FAIL" -eq 0 ] && echo "SMOKE: PASS" || { echo "SMOKE: FAIL"; exit 1; }
