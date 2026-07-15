@@ -15,6 +15,14 @@ def med(sel, key, cast=float):
     vals = [cast(r[key]) for r in sel if r[key] not in ("", None)]
     return st.median(vals) if vals else None
 
+# Rows with empty success never executed (API error / rate limit) — report and exclude.
+invalid = [r for r in rows if r["success"] == ""]
+rows = [r for r in rows if r["success"] != ""]
+if invalid:
+    print(f"UWAGA: {len(invalid)} runów nieodbytych (api_error/limit) — wykluczone z agregacji.\n")
+if not rows:
+    sys.exit("no valid rows")
+
 tasks = sorted({r["task"] for r in rows})
 print(f'{"task":<24}{"var":<5}{"n":<4}{"success%":<10}{"med_cost$":<11}{"med_turns":<11}{"med_out_tok":<12}{"med_dur_s":<10}')
 for t in tasks:

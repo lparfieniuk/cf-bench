@@ -55,6 +55,10 @@ try:
 except Exception:
     d = {}
 u = d.get("usage", {})
+# A run that never executed (API error, rate limit) is INVALID, not a failure:
+# success column stays empty so summaries exclude it instead of skewing rates.
+if d.get("is_error") or d.get("api_error_status") or d.get("terminal_reason") == "api_error":
+    success = ""
 row = [
     datetime.datetime.now().isoformat(timespec="seconds"),
     task, variant, repeat, model, success,
