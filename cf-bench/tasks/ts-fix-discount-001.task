@@ -1,0 +1,8 @@
+# cf-bench task definition (sourced by bash — flat KEY="value" only)
+TASK_ID="ts-fix-discount-001"
+PROMPT="Tests in this repo are failing. Find the bug and fix it so npm test passes. Do not modify the tests."
+FIXTURE="ts-mini"
+CONFIG="ts-mini-b"
+MAX_TURNS="15"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

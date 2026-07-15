@@ -1,0 +1,4 @@
+node_modules/
+.DS_Store
+research-reports/.scan-runner.log
+cf-bench/results/validation-*.tsv
