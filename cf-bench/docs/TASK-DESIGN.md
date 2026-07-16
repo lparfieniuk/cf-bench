@@ -33,6 +33,15 @@ spełnia (100% sukcesu w A i B) — służy jako smoke/koszt-only.
 czytanie package.json) NIE dyskryminują — nowoczesne modele robią to niezawodnie. Dyskryminuje
 tylko wiedza bez sygnału (klasa 1) albo z sygnałem sprzecznym (klasa 2).
 
+**Lekcja z kalibracji klasy 2 (2026-07-16, N=5, sonnet)**: w MAŁYM fixture (3–5 plików)
+conflicting-signal też nie dyskryminuje sukcesu — A=100% na obu zadaniach (agent rozstrzyga
+konflikt kod-vs-komentarz i wybiera konwencję po sąsiedztwie domenowym). Efekt configu jest za to
+duży kosztowo: −11% do −23% kosztu, tury 9→6/7, output tokens −43% do −53%. Hipoteza robocza:
+"zgubienie w brownfield" wymaga SKALI — sygnał zakopany w setkach plików, eksploracja droga.
+Następna iteracja klasy 2: fixture rozdęty syntetycznym szumem (100+ plausible plików) i/lub
+sygnał przeniesiony daleko od edytowanego pliku. Do tego czasu 004/005 klasyfikować jako
+cost-only o wysokiej delcie.
+
 ## Cel kalibracyjny (weryfikowany empirycznie, N≥5)
 
 - klasa 1: A **0–30%**, B **>85%**
