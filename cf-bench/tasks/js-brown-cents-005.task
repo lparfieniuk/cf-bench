@@ -1,0 +1,11 @@
+# CLASS: conflicting-signal (brownfield) — stale comment says dollars, code (formatAmount /100) says cents
+# GAP: "all money values are integer cents ... trust the code, not the comments" (configs/js-brown-cents-b/CLAUDE.md)
+# HYPOTHESIS: A trusts the loud dollar comment and adds 0.30 instead of 30, or returns floats
+TASK_ID="js-brown-cents-005"
+PROMPT="Add addProcessingFee(amount) in src/billing.js: standard payment processing fee is 2.9% plus the usual fixed part, rounded. Make npm test pass; do not modify the tests."
+FIXTURE="js-brown-cents"
+CONFIG="js-brown-cents-b"
+HIDDEN="js-brown-cents-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

@@ -1,0 +1,11 @@
+# CLASS: conflicting-signal (brownfield) — repo has both conventions ~50/50
+# GAP: "new code returns result objects ... user-service is legacy, do NOT imitate" (configs/js-brown-errors-b/CLAUDE.md)
+# HYPOTHESIS: A picks the throwing style (idiomatic JS default + user-service precedent) ~half the time
+TASK_ID="js-brown-errors-004"
+PROMPT="Add validateCoupon(code) in src/coupon-service.js: a valid coupon is 9 uppercase alphanumeric characters; the code SUMMER24X is expired. Follow the project's error-handling convention. Make npm test pass; do not modify the tests."
+FIXTURE="js-brown-errors"
+CONFIG="js-brown-errors-b"
+HIDDEN="js-brown-errors-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

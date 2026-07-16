@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Full matrix: every tasks/*.task × variants A,B × CFBENCH_REPEATS (default 3).
+# Matrix: tasks × variants A,B × CFBENCH_REPEATS (default 3).
+# Optional $1 = task filename glob (default *.task), e.g. run-bench.sh 'js-brown-*.task'
 # Writes results/bench-<timestamp>.tsv and prints it.
 set -euo pipefail
 
 BENCH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPEATS="${CFBENCH_REPEATS:-3}"
+TASK_GLOB="${1:-*.task}"
 OUT="$BENCH_ROOT/results/bench-$(date +%Y%m%d-%H%M%S).tsv"
 mkdir -p "$BENCH_ROOT/results"
 
@@ -14,7 +16,7 @@ echo "$HEADER" > "$OUT"
 # Circuit breaker: 2 consecutive invalid runs (empty success = API error /
 # rate limit) abort the whole matrix instead of burning every remaining slot.
 ERR_STREAK=0
-for TASK_FILE in "$BENCH_ROOT"/tasks/*.task; do
+for TASK_FILE in "$BENCH_ROOT"/tasks/$TASK_GLOB; do
   for VARIANT in A B; do
     for i in $(seq 1 "$REPEATS"); do
       echo ">> $(basename "$TASK_FILE") $VARIANT #$i" >&2

@@ -18,12 +18,27 @@ spełnia (100% sukcesu w A i B) — służy jako smoke/koszt-only.
 5. **Trudność z wiedzy, nie z łamigłówki**: sama poprawka trywialna; trudne jest CO/GDZIE zgodnie
    z polityką projektu. Nie testujemy inteligencji modelu, testujemy wartość configu.
 
+## Klasy zadań (po kalibracji 2026-07-16, N=5)
+
+1. **encoded-decision** — polityka/decyzja zespołu bez ŻADNEGO sygnału w repo (js-stack-002).
+   A=0% jest tu poprawne: mierzy dokładnie wartość zapisania decyzji w configu. Najsilniejsze
+   dyskryminatory (zmierzone: A 0% vs B 100%, koszt −24%).
+2. **conflicting-signal (brownfield)** — sygnał w repo ISTNIEJE, ale jest sprzeczny (kłamiący
+   komentarz vs kod, dwie konwencje 50/50). A powinno lądować w 20–70% — mierzy, czy config
+   wygrywa z błędnym priorytetem. Rdzeń wartości dla brownfield/legacy.
+3. **cost-only** — oba warianty przechodzą, config tnie koszt/tury (ts-mini-001, js-dist-003).
+   Trzymamy 1–2 takie dla metryki kosztowej, nie liczą się do dyskryminacji.
+
+**Lekcja z obalenia hipotezy js-dist**: pułapki odkrywalne mechanicznie (śledzenie importów,
+czytanie package.json) NIE dyskryminują — nowoczesne modele robią to niezawodnie. Dyskryminuje
+tylko wiedza bez sygnału (klasa 1) albo z sygnałem sprzecznym (klasa 2).
+
 ## Cel kalibracyjny (weryfikowany empirycznie, N≥5)
 
-- wariant A (bez configu): sukces **20–70%**
-- wariant B (z configiem): sukces **>85%**
-- poza widełkami → zadanie do przeprojektowania (za łatwe = mierzy tylko koszt; nietykalne dla A
-  przez brak jakiegokolwiek sygnału = trik, nie benchmark)
+- klasa 1: A **0–30%**, B **>85%**
+- klasa 2: A **20–70%**, B **>85%**
+- klasa 3: A=B≈100%, Δkosztu < 0
+- poza widełkami → przeprojektowanie albo świadoma reklasyfikacja
 
 ## Anty-wzorce
 
