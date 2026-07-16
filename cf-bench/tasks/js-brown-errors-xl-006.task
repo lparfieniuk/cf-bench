@@ -1,0 +1,12 @@
+# CLASS: conflicting-signal @ scale — 120 noise files, conventions mixed ~50/50 across repo,
+#        canonical style named only in config; signal files buried in src/services/*
+# GAP: "new code returns result objects ... user-service is legacy, do NOT imitate" (configs/js-brown-errors-b/CLAUDE.md)
+# HYPOTHESIS: at scale A cannot cheaply resolve the 50/50 convention split and picks throw ~half the time
+TASK_ID="js-brown-errors-xl-006"
+PROMPT="Add validateCoupon(code) in src/coupon-service.js: a valid coupon is 9 uppercase alphanumeric characters; the code SUMMER24X is expired. Follow the project's error-handling convention. Make npm test pass; do not modify the tests."
+FIXTURE="js-brown-errors-xl"
+CONFIG="js-brown-errors-b"
+HIDDEN="js-brown-errors-hidden"
+MAX_TURNS="20"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

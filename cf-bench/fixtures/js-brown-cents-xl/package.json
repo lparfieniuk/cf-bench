@@ -1,0 +1,8 @@
+{
+  "name": "js-brown",
+  "version": "3.7.2",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

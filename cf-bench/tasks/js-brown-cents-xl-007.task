@@ -1,0 +1,12 @@
+# CLASS: conflicting-signal @ scale — 120 noise files; lying dollar comment sits in the edited
+#        file, the contradicting code signal (formatAmount /100) buried in src/lib/money/
+# GAP: "all money values are integer cents ... trust the code, not the comments" (configs/js-brown-cents-b/CLAUDE.md)
+# HYPOTHESIS: at scale A trusts the local dollar comment because the cents signal is far away
+TASK_ID="js-brown-cents-xl-007"
+PROMPT="Add addProcessingFee(amount) in src/billing.js: standard payment processing fee is 2.9% plus the usual fixed part, rounded. Make npm test pass; do not modify the tests."
+FIXTURE="js-brown-cents-xl"
+CONFIG="js-brown-cents-b"
+HIDDEN="js-brown-cents-hidden"
+MAX_TURNS="20"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"
