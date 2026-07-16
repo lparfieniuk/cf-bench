@@ -26,6 +26,13 @@ Analogicznie w skillu `pre-review` (instrukcja tworzenia markera) — dziś skil
 `$PWD`, co ma tę samą wadę. Dodatkowo: skill i hook mają rozjazd `printf` vs `echo` — nieszkodliwy
 tylko dlatego, że `pwd_hash` robi `tr -d '\n'`; ujednolicić na `printf` dla jasności.
 
+## Drugi przypadek z praktyki (2026-07-16, ta sama sesja)
+
+Sesyjny cwd wskazywał **skasowany katalog mktemp** (poprzednia komenda robiła `cd "$W" && ... &&
+rm -rf "$W"`) — hook hashował ścieżkę-widmo i blokował commit mimo świeżego review. Normalizacja
+do `git rev-parse --show-toplevel` rozwiązuje też ten wariant (fallback gdy git zawiedzie:
+blokuj z komunikatem "nieznany cwd", nie z mylącym "brak review").
+
 ## Test akceptacyjny
 
 1. `/pre-review` w korzeniu repo → marker.

@@ -42,6 +42,20 @@ Następna iteracja klasy 2: fixture rozdęty syntetycznym szumem (100+ plausible
 sygnał przeniesiony daleko od edytowanego pliku. Do tego czasu 004/005 klasyfikować jako
 cost-only o wysokiej delcie.
 
+**Lekcja z eksperymentu skali (2026-07-16, XL = 120 plików szumu, N=5, sonnet)** — skala
+rozszczepia klasę 2 na dwie podklasy o różnym zachowaniu:
+
+- **2a. local-lie / distant-truth** (cents-xl: kłamiący komentarz w edytowanym pliku, prawda
+  zakopana w src/lib/money/): skala FLIPUJE sukces — A 100%→**0%** (0/5), B 100%. Agent
+  w dużym repo ufa lokalnemu sygnałowi i nie dociera do odległej prawdy. Najcenniejsza
+  podklasa dla brownfield.
+- **2b. grep-findable convention** (errors-xl: konwencja wyszukiwalna wzorcem w dowolnym
+  pliku): sukcesu NIE flipuje na żadnej skali (A=100%), ale koszt eksploduje — config daje
+  **−50% kosztu, −60% output tokens, czas 72s→26s, tury 16→9**. Klasa "cost-at-scale".
+
+Reguła projektowa: dyskryminacja sukcesu wymaga złej wskazówki LOKALNIE + prawdy DALEKO
+(albo zera sygnału — klasa 1). Konwencje wyszukiwalne grepem mierz jako koszt, nie sukces.
+
 ## Cel kalibracyjny (weryfikowany empirycznie, N≥5)
 
 - klasa 1: A **0–30%**, B **>85%**
