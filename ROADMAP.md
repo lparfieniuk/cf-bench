@@ -1,4 +1,4 @@
-# Roadmapa cf-bench (stan: 2026-07-17)
+# Roadmapa cf-bench (stan: 2026-07-17, po research benchmarków + upgrade rygoru)
 
 Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 Ścieżka: OSS harness → leaderboard/publikacje → płatny regression-watch + audyty.
@@ -12,6 +12,12 @@ Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
   grep-findable = cost-only (−50% @ 120 plikach). Łączny koszt eksperymentów ~$21
 - Draft artykułu v2 (`content/draft-brownfield-traps.md`) — czeka na recenzję Lukasza
 - Rutyna researchowa (program + skrypt + launchd instrukcja), 2 sugestie dla context-forge
+- **Research benchmarków AI** (`RESEARCH-AI-BENCHMARKS-2026-07-17.md`): SWE-bench (kryzys
+  kontaminacji), Terminal-Bench (oracle solutions), tau-bench (pass^k), HAL (cost-aware),
+  SkillsBench + ETH AGENTS.md + "context files hurt" (walidacja tezy i timing publikacji)
+- **Upgrade rygoru wg research**: summarize.sh z Wilson 95% CI + Fisher exact + pass^n;
+  oracle solutions (`cf-bench/oracles/`) + `validate-tasks.sh` (outcome validity, w smoke);
+  nowa klasa zadań **config-lies** (js-config-lies-008, kalibracja czeka na budżet)
 
 ## 🔜 Najbliższe (kolejność rekomendowana)
 
@@ -22,6 +28,8 @@ Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 3. **Publikacja**: dev.to (pełny tekst) → Show HN (`Show HN: I set traps for AI coding agents...`)
    → r/ClaudeAI, X thread; wg playbooka z GTM doc (odpowiadanie w pierwszej godzinie HN)
 4. **[LUKASZ, 5 min] launchd** dla cotygodniowego research-scan (`research-routine/README-SCHEDULING.md`)
+5. **[BUDŻET ~$1.5] Kalibracja config-lies** — js-config-lies-008, N=5 A/B (10 runów × ~$0.13);
+   wynik zasila draft (spór "context files hurt" rozstrzygany pomiarem)
 
 ## 📦 Faza następna (po publikacji)
 

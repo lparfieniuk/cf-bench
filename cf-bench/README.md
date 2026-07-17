@@ -21,7 +21,13 @@ N powtórzeń, metryki z twardego JSON-a `claude -p`.
 - **Świeży workdir**: każdy run w `mktemp -d`, fixture kopiowany, po runie sprzątany. Zero przecieków stanu.
 - **Sanity gate**: przed runem `check.sh` MUSI failować (fixture faktycznie zepsuty), inaczej run odrzucony.
 - **N powtórzeń** (default 3): wariancja LLM jest wysoka; raportujemy mediany, nie pojedyncze runy.
+- **Statystyka** (w `summarize.sh`): Wilson 95% CI na pass rate, Fisher exact (two-sided) na
+  delcie sukcesu B vs A, `pass^n` = 1 gdy wszystkie n runów przeszło (niezawodność à la
+  tau-bench pass^k — wariancja to sygnał, nie szum).
+- **Outcome validity** (praktyka Terminal-Bench): każde zadanie ma oracle solution
+  (`oracles/`), `runner/validate-tasks.sh` dowodzi rozwiązywalności; w smoke.sh.
 - **Rygor**: żadnych LLM-judge w pętli oceny; sukces = testy fixture'a przechodzą.
+  (Walidacja literaturą 2026: audyty LLM-judge raportują >50% błędów oceny.)
 
 ## Znane ograniczenia (uczciwie)
 
@@ -40,9 +46,12 @@ runner/run-task.sh tasks/ts-fix-discount-001.task B 1
 CFBENCH_REPEATS=3 runner/run-bench.sh            # → results/bench-YYYYMMDD-HHMMSS.tsv
 
 # agregacja:
-runner/summarize.sh results/bench-*.tsv          # mediany + delta B vs A
+runner/summarize.sh results/bench-*.tsv          # mediany, Wilson 95% CI, pass^n, Fisher p, delta B vs A
 
-# smoke test bez kosztów LLM (mock claude):
+# walidacja zadań przez oracle solutions (zero kosztów LLM):
+runner/validate-tasks.sh                         # każdy task: check failuje przed oraclem, przechodzi po
+
+# smoke test bez kosztów LLM (mock claude + validate-tasks):
 test/smoke.sh
 ```
 

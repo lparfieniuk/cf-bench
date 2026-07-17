@@ -12,7 +12,7 @@ zapisać nowości do lokalnej bazy ai-knowledge i zostawić krótki raport.
 
 Przeszukaj pod kątem NOWOŚCI z ostatnich 7 dni:
 1. Anthropic engineering blog + changelog Claude Code (nowe funkcje benchmarku/evali, zmiany Skill Creator)
-2. Konkurencja bezpośrednia: AgentBench.app, claude-skills-benchmark, Skill Creator plugin, nowe "benchmark your agent config" narzędzia
+2. Konkurencja bezpośrednia: AgentBench.app, claude-skills-benchmark, Skill Creator plugin, **SkillsBench (arXiv 2602.12670 — obserwuj rozszerzenie z "skills jako klasa" na per-repo configi)**, nowe "benchmark your agent config" narzędzia
 3. Sąsiedzi: Headroom, promptfoo, Braintrust, Langfuse, Vals AI, LMArena — zmiany produktowe/cenowe/funding
 4. Badania: arXiv — skuteczność plików kontekstu (AGENTS.md/CLAUDE.md), ewaluacja agentów kodujących, harness design
 5. HN/Reddit: dyskusje o regresjach jakości agentów po updatach modeli (paliwo dla regression-watch)

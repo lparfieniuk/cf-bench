@@ -1,0 +1,12 @@
+# CLASS: config-lies — config asserts the WRONG convention (throw); repo truth + hidden spec
+#        want result objects. Inverted A/B semantics: B is sabotaged, measures blind config trust.
+# GAP (inverted): "services throw domain errors ... do NOT imitate order-service" (configs/js-config-lies-b/CLAUDE.md) — this line is FALSE w.r.t. the repo
+# HYPOTHESIS: B trusts the stale config and throws → fails hidden contract; A explores repo and picks result objects. Expected Δ B-A ≤ 0 (trust-miscalibration metric).
+TASK_ID="js-config-lies-008"
+PROMPT="Add validateCoupon(code) in src/coupon-service.js: a valid coupon is 9 uppercase alphanumeric characters; the code SUMMER24X is expired. Follow the project's error-handling convention. Make npm test pass; do not modify the tests."
+FIXTURE="js-brown-errors"
+CONFIG="js-config-lies-b"
+HIDDEN="js-brown-errors-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

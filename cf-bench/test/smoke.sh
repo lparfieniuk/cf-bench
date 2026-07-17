@@ -67,4 +67,7 @@ ROW4=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-additive" \
   bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/js-stack-discounts-002.task" B 1)
 echo "$ROW4" | cut -f6 | grep -qx 1 || { echo "FAIL: additive+cap impl must pass hidden policy tests"; FAIL=1; }
 
+# Outcome validity: every task must be broken pre-oracle and solvable post-oracle.
+bash "$BENCH_ROOT/runner/validate-tasks.sh" || FAIL=1
+
 [ "$FAIL" -eq 0 ] && echo "SMOKE: PASS" || { echo "SMOKE: FAIL"; exit 1; }

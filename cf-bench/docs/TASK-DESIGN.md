@@ -17,6 +17,10 @@ spełnia (100% sukcesu w A i B) — służy jako smoke/koszt-only.
    exit code, nigdy LLM-judge.
 5. **Trudność z wiedzy, nie z łamigłówki**: sama poprawka trywialna; trudne jest CO/GDZIE zgodnie
    z polityką projektu. Nie testujemy inteligencji modelu, testujemy wartość configu.
+6. **Oracle solution** (praktyka Terminal-Bench): `oracles/<fixture>.sh` (fallback: nazwa bez
+   sufiksu `-xl`) aplikuje wzorcową poprawkę; `runner/validate-tasks.sh` dowodzi dla każdego
+   zadania, że check failuje przed oraclem i przechodzi po nim (+ hidden). Oracles żyją POZA
+   `fixtures/`, żeby nigdy nie trafiły do workdiru agenta. Egzekwowane w smoke.sh.
 
 ## Klasy zadań (po kalibracji 2026-07-16, N=5)
 
@@ -28,6 +32,12 @@ spełnia (100% sukcesu w A i B) — służy jako smoke/koszt-only.
    wygrywa z błędnym priorytetem. Rdzeń wartości dla brownfield/legacy.
 3. **cost-only** — oba warianty przechodzą, config tnie koszt/tury (ts-mini-001, js-dist-003).
    Trzymamy 1–2 takie dla metryki kosztowej, nie liczą się do dyskryminacji.
+4. **config-lies** (js-config-lies-008, NIEKALIBROWANA — czeka na budżet) — config twierdzi
+   NIEPRAWDĘ względem repo; semantyka A/B odwrócona: B jest sabotowane, mierzymy ślepe
+   zaufanie do configu (oczekiwane Δ B-A ≤ 0). Motywacja: literatura 2026 ("context files
+   hurt", SkillsBench: comprehensive docs −2.9pp) — miara zaufania jako produkt audytowy.
+   Dla tej klasy cel kalibracyjny: A wysokie, B ISTOTNIE niższe; Δ=0 = model odporny na
+   kłamiący config (też cenny wynik).
 
 **Lekcja z obalenia hipotezy js-dist**: pułapki odkrywalne mechanicznie (śledzenie importów,
 czytanie package.json) NIE dyskryminują — nowoczesne modele robią to niezawodnie. Dyskryminuje
