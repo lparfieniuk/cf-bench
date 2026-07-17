@@ -28,6 +28,9 @@ płatny regression-watch + audyty. Etap: Faza 0 (fundament pomiarowy). Working n
 - CLI bez `--model` wybiera różne modele między runami.
 - `--bare` wymaga ANTHROPIC_API_KEY (OAuth odpada) — dlatego `--setting-sources project`.
 - Runy LLM kosztują: pełna macierz wymaga zgody Lukasza na budżet; szacuj koszt przed uruchomieniem.
+- Runy benchmarku dzielą limity sesji OAuth z interaktywną pracą (429 "session limit" w środku
+  macierzy → circuit breaker; zaobserwowane 2026-07-17). Duże macierze planuj po resecie limitu;
+  429 w wierszu = terminal_reason `api_error`, summarize je wyklucza.
 
 ## Kontekst biznesowy (skrót)
 

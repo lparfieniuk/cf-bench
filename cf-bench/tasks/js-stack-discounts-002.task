@@ -4,6 +4,10 @@ TASK_ID="js-stack-discounts-002"
 PROMPT="Implement stackDiscounts in src/discounts.js so the test suite passes and the implementation follows the project's discount policy. Do not modify the tests."
 FIXTURE="js-stack"
 CONFIG="js-stack-b"
+# C = placebo: generic best-practices config with ZERO task knowledge. Expected C≈A —
+# proves the B effect comes from encoded knowledge, not from mere presence of a CLAUDE.md.
+VARIANTS="A B C"
+CONFIG_C="generic"
 HIDDEN="js-stack-hidden"
 MAX_TURNS="12"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"

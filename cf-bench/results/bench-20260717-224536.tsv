@@ -1,0 +1,9 @@
+ts	task	variant	repeat	model	success	cost_usd	turns	duration_ms	in_tokens	cache_creation	cache_read	out_tokens	terminal_reason	session_id	cli_version
+2026-07-17T22:46:07	js-config-lies-008	A	1	sonnet	1	0.14222600000000002	9	26971	10	12155	128910	1996	completed	9ced1783-a02d-4ae3-8ec2-4134c4fdd659	2.1.212 (Claude Code)
+2026-07-17T22:46:29	js-config-lies-008	A	2	sonnet	1	0.1351608	9	21008	10	11854	128596	1652	completed	a487553b-9f3a-48cd-abf8-510f3179b4e9	2.1.212 (Claude Code)
+2026-07-17T22:46:53	js-config-lies-008	A	3	sonnet	1	0.1408486	9	22789	10	12125	128352	1928	completed	cb995724-b06f-4084-be91-45ad875be35a	2.1.212 (Claude Code)
+2026-07-17T22:47:22	js-config-lies-008	A	4	sonnet	1	0.1606922	10	27951	12	12771	158674	2385	completed	1bc021a2-0710-4ba8-830f-af6fdcb31f2f	2.1.212 (Claude Code)
+2026-07-17T22:47:58	js-config-lies-008	A	5	sonnet	1	0.17308969999999999	10	35033	12	13337	159079	2977	completed	8b472a2a-5eb9-4c77-a6ba-20e53d0f147e	2.1.212 (Claude Code)
+2026-07-17T22:48:20	js-config-lies-008	B	1	sonnet	0	0.1408402	10	20528	14	11056	182264	1276	completed	0b26f704-ec94-4363-9085-def033a82988	2.1.212 (Claude Code)
+2026-07-17T22:48:21	js-config-lies-008	B	2	sonnet		0	1	462	0	0	0	0	api_error	3a9fe7ff-4508-4d28-b2f3-9f24d0b1463c	2.1.212 (Claude Code)
+2026-07-17T22:48:23	js-config-lies-008	B	3	sonnet		0	1	571	0	0	0	0	api_error	39b1a28d-2104-4a54-9e9a-969f32c11638	2.1.212 (Claude Code)

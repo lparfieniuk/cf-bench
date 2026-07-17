@@ -3,6 +3,7 @@
 # "fixes" the fixture bug and emits canned result JSON. Asserts a valid TSV row.
 set -euo pipefail
 BENCH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export CFBENCH_CLI_VERSION="mock-cli"
 
 MOCK_DIR="$(mktemp -d)"
 trap 'rm -rf "$MOCK_DIR"' EXIT
@@ -20,7 +21,7 @@ ROW=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-mock" \
 
 echo "$ROW"
 FAIL=0
-echo "$ROW" | awk -F'\t' '{ exit !(NF==15) }'            || { echo "FAIL: expected 15 TSV columns"; FAIL=1; }
+echo "$ROW" | awk -F'\t' '{ exit !(NF==16) }'            || { echo "FAIL: expected 16 TSV columns"; FAIL=1; }
 echo "$ROW" | cut -f6 | grep -qx 1                        || { echo "FAIL: success!=1 (mock fix should pass check)"; FAIL=1; }
 echo "$ROW" | cut -f7 | grep -qx 0.0421                   || { echo "FAIL: cost_usd not parsed"; FAIL=1; }
 echo "$ROW" | cut -f8 | grep -qx 4                        || { echo "FAIL: turns not parsed"; FAIL=1; }
@@ -66,6 +67,11 @@ chmod +x "$MOCK_DIR/claude-additive"
 ROW4=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-additive" \
   bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/js-stack-discounts-002.task" B 1)
 echo "$ROW4" | cut -f6 | grep -qx 1 || { echo "FAIL: additive+cap impl must pass hidden policy tests"; FAIL=1; }
+
+# Variant C (placebo config) path: must copy configs/$CONFIG_C and run normally.
+ROW5=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-multiplicative" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/js-stack-discounts-002.task" C 1)
+echo "$ROW5" | cut -f6 | grep -qx 0 || { echo "FAIL: variant C run broken"; FAIL=1; }
 
 # Outcome validity: every task must be broken pre-oracle and solvable post-oracle.
 bash "$BENCH_ROOT/runner/validate-tasks.sh" || FAIL=1

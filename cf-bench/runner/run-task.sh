@@ -22,8 +22,17 @@ if bash "$WORK/$CHECK" 2>/dev/null; then
   exit 2
 fi
 
+# A = bare fixture; B = task's CONFIG; any other letter needs CONFIG_<letter>
+# in the .task (e.g. CONFIG_C="generic" — placebo config, no task knowledge).
 if [ "$VARIANT" = "B" ]; then
   cp -R "$BENCH_ROOT/configs/$CONFIG/." "$WORK/"
+elif [ "$VARIANT" != "A" ]; then
+  CONFIG_VAR="CONFIG_$VARIANT"
+  if [ -z "${!CONFIG_VAR:-}" ]; then
+    echo "FATAL: variant $VARIANT requested but $CONFIG_VAR not set in $TASK_FILE" >&2
+    exit 2
+  fi
+  cp -R "$BENCH_ROOT/configs/${!CONFIG_VAR}/." "$WORK/"
 fi
 
 RESULT_JSON="$WORK/.cfbench-result.json"
@@ -39,6 +48,12 @@ set +e
 CLAUDE_EXIT=$?
 set -e
 
+# Diagnose invalid runs: without this the mktemp cleanup eats the only error trace.
+if [ "$CLAUDE_EXIT" -ne 0 ]; then
+  echo "claude exit $CLAUDE_EXIT; stderr tail:" >&2
+  tail -3 "$WORK/.cfbench-stderr.log" >&2 || true
+fi
+
 # Hidden assertions: spec that lives outside the repo (like team knowledge).
 # Injected AFTER the agent run so visible tests stay ambiguous by design.
 if [ -n "$HIDDEN" ]; then
@@ -47,9 +62,12 @@ fi
 
 if bash "$WORK/$CHECK" 2>/dev/null; then SUCCESS=1; else SUCCESS=0; fi
 
-python3 - "$RESULT_JSON" "$TASK_ID" "$VARIANT" "$REPEAT" "$MODEL" "$SUCCESS" "$CLAUDE_EXIT" <<'PY'
+# CFBENCH_CLI_VERSION override keeps mocks from being invoked with --version in tests.
+CLI_VERSION="${CFBENCH_CLI_VERSION:-$("$CLAUDE_BIN" --version 2>/dev/null | head -1 || echo unknown)}"
+
+python3 - "$RESULT_JSON" "$TASK_ID" "$VARIANT" "$REPEAT" "$MODEL" "$SUCCESS" "$CLAUDE_EXIT" "$CLI_VERSION" <<'PY'
 import json, sys, datetime
-path, task, variant, repeat, model, success, cexit = sys.argv[1:8]
+path, task, variant, repeat, model, success, cexit, cli_version = sys.argv[1:9]
 try:
     d = json.load(open(path))
 except Exception:
@@ -67,6 +85,7 @@ row = [
     f'{u.get("input_tokens", "")}', f'{u.get("cache_creation_input_tokens", "")}',
     f'{u.get("cache_read_input_tokens", "")}', f'{u.get("output_tokens", "")}',
     d.get("terminal_reason", f"claude_exit_{cexit}"), d.get("session_id", ""),
+    cli_version,
 ]
 print("\t".join(str(c) for c in row))
 PY

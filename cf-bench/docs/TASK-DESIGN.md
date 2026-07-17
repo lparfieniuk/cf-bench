@@ -73,6 +73,12 @@ Reguła projektowa: dyskryminacja sukcesu wymaga złej wskazówki LOKALNIE + pra
 - klasa 3: A=B≈100%, Δkosztu < 0
 - poza widełkami → przeprojektowanie albo świadoma reklasyfikacja
 
+## Wariant C (placebo) — obrona przed "sami napisaliście configi"
+
+Dla zadań flagowych dodaj `VARIANTS="A B C"` + `CONFIG_C="generic"` (configs/generic/ —
+best practices bez wiedzy o zadaniu). C≈A = efekt B pochodzi z wiedzy; C>A = część efektu
+to sama obecność configu (raportować uczciwie). Włączone: js-stack-discounts-002.
+
 ## Anty-wzorce
 
 - Spec w całości w widocznych testach (agent czyta testy → zero dyskryminacji)

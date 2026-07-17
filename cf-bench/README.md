@@ -2,7 +2,9 @@
 
 Mierzy, czy config agenta kodującego (CLAUDE.md / skills / MCP) faktycznie poprawia wyniki —
 zamiast wierzyć na słowo. A/B: ten sam task, wariant **A** (bez configu) vs **B** (z configiem),
-N powtórzeń, metryki z twardego JSON-a `claude -p`.
+N powtórzeń, metryki z twardego JSON-a `claude -p`. Opcjonalny wariant **C** (placebo):
+`VARIANTS="A B C"` + `CONFIG_C="generic"` w `.task` — generyczny config bez wiedzy o zadaniu;
+oczekiwane C≈A dowodzi, że efekt B to zakodowana wiedza, nie sama obecność CLAUDE.md.
 
 ## Metryki (na run)
 
@@ -12,6 +14,7 @@ N powtórzeń, metryki z twardego JSON-a `claude -p`.
 | `cost_usd`, `turns`, `duration_ms` | `total_cost_usd`, `num_turns`, `duration_ms` z result JSON |
 | `in_tokens`, `cache_creation`, `cache_read`, `out_tokens` | `usage.*` |
 | `terminal_reason`, `session_id` | diagnostyka / audyt transkryptu |
+| `cli_version` | `claude --version` — reprodukowalność (harness variance) |
 
 ## Metodologia
 

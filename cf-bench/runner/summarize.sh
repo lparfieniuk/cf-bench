@@ -24,7 +24,7 @@ def wilson(k, n, z=1.96):
     d = 1 + z * z / n
     c = p + z * z / (2 * n)
     m = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
-    return ((c - m) / d, (c + m) / d)
+    return (max(0.0, (c - m) / d), min(1.0, (c + m) / d))
 
 def fisher_two_sided(a, b, c, d):
     # Exact hypergeometric sum over tables with the observed margins.
@@ -49,7 +49,8 @@ hdr = f'{"task":<24}{"var":<5}{"n":<4}{"succ%":<7}{"95%CI":<12}{"pass^n":<7}{"me
 print(hdr)
 for t in tasks:
     stats = {}
-    for v in ("A", "B"):
+    variants = sorted({r["variant"] for r in rows if r["task"] == t})
+    for v in variants:
         sel = [r for r in rows if r["task"] == t and r["variant"] == v]
         if not sel:
             continue
@@ -64,11 +65,13 @@ for t in tasks:
         ci = f"{100*lo:.0f}-{100*hi:.0f}"
         passn = "1" if k == n else "0"
         print(f'{t:<24}{v:<5}{n:<4}{s["succ"]:<7.0f}{ci:<12}{passn:<7}{s["cost"]:<11.4f}{s["turns"]:<11.0f}{s["out"]:<12.0f}{s["dur"]:<10.1f}')
-    if "A" in stats and "B" in stats:
-        a, b = stats["A"], stats["B"]
+    for v in variants:
+        if v == "A" or "A" not in stats:
+            continue
+        a, b = stats["A"], stats[v]
         dcost = 100 * (b["cost"] - a["cost"]) / a["cost"] if (a["cost"] and b["cost"]) else 0
         p = fisher_two_sided(b["k"], b["n"] - b["k"], a["k"], a["n"] - a["k"])
-        print(f'{t:<24}{"Δ B-A":<5}{"":<4}{b["succ"]-a["succ"]:<+7.0f}{"p="+format(p, ".3g"):<12}{"":<7}{dcost:<+11.1f}%')
+        print(f'{t:<24}{"Δ"+v+"-A":<5}{"":<4}{b["succ"]-a["succ"]:<+7.0f}{"p="+format(p, ".3g"):<12}{"":<7}{dcost:<+11.1f}%')
 
 print("\nmediany; succ% = pass rate, CI = Wilson 95%; pass^n = 1 gdy WSZYSTKIE n runów")
 print("przeszły (niezawodność à la tau-bench pass^k); p = Fisher exact (two-sided) dla")
