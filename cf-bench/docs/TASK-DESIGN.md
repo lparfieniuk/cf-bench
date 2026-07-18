@@ -90,6 +90,34 @@ next(err) do centralnego middleware). Zadania: js-rxjs-submit-009, js-express-er
   w app.js za mocny w małym repo — ta sama lekcja co brown-errors small). Koszt −7.9%.
   Klasyfikacja: cost-only; kandydat na wersję XL (szum + zakopanie error-handlera).
 
+**Rozbudowa packa 2026-07-18, SKALIBROWANA (N=5, sonnet)** — wynik negatywny, lekcja kluczowa:
+
+- js-rxjs-catch-011 (catchError wewnątrz flatteningu): A 5/5 = cost-only, koszt −18.7%
+- js-rxjs-latest-012 (withLatestFrom vs combineLatest): A 5/5, koszt ±0 — MARTWE (do wymiany)
+- js-rxjs-share-013 (shareReplay vs share): A 5/5 = cost-only, koszt −8.9%
+- js-express-errors-xl-014 (010 w skali, 134 pliki, errorHandler za setup/pipeline.js):
+  A 5/5 = cost-only, koszt −28.6%, tury 16→9. Hipoteza "sygnał middleware słabnie ze
+  skalą" OBALONA — spójne z lekcją 2b (konwencja grep-findable = cost-at-scale).
+
+**Reguła projektowa (z tej kalibracji): dyskryminuje tylko polityka SPRZECZNA z priorem
+treningowym.** catchError-wewnątrz, withLatestFrom-dla-triggerów, shareReplay-dla-cache to
+KANONICZNE odpowiedzi (NgRx lore, blogi) — model zna je bez configu, mylący sąsiad nie
+przebija prioru. js-rxjs-submit-009 flipuje, bo wybór exhaustMap jest KONTESTOWANY
+(switchMap/mergeMap/concatMap wszystkie obronne; polityka zespołu = arbitralna decyzja).
+Test przy projektowaniu: "czy senior bez kontekstu firmy odpowiedziałby jednoznacznie?"
+TAK → zadanie będzie cost-only. Wartość configu = ROZBIEŻNOŚĆ polityki zespołu z kanonem,
+nie sama obecność konwencji. (To też narracja produktowa: agent zna best practices;
+płacisz za pomiar tego, gdzie twój zespół od nich odchodzi.)
+
+Wszystkie 4: oracle + sanity anty-wzorca (anty-wzorzec przechodzi widoczne, failuje hidden)
+zweryfikowane przed kalibracją. Dane: results/bench-20260718-101708.tsv.
+
+**Odrzucone: takeUntil/teardown** (z roadmapy). Konwencja teardown NIE jest behawioralnie
+dyskryminowalna: `subscription.unsubscribe()` w destroy() jest obserwacyjnie równoważne
+`takeUntil(destroy$)` — ukryty test nie odróżni formy bez grepowania źródła, a check na formę
+łamie zasadę determinizmu behawioralnego (rubryka pkt 4–5). Kandydat tylko jeśli kiedyś
+powstanie klasa "form-lint" mierzona osobno od sukcesu.
+
 Technika: biblioteka WENDOROWANA — `node_modules/` commitowane do fixture (rxjs przycięty
 do dist/, ~4.5MB; express tree ~3.9MB), zero npm install w runie (zasada twarda 3 zachowana).
 `.gitignore` ma wyjątek `!cf-bench/fixtures/*/node_modules/`.
