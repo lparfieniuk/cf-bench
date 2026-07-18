@@ -1,65 +1,71 @@
-# Roadmapa cf-bench (stan: 2026-07-17, po research benchmarków + upgrade rygoru)
+# Roadmapa cf-bench (stan: 2026-07-18, po library-pack + research celów)
 
 Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 Ścieżka: OSS harness → leaderboard/publikacje → płatny regression-watch + audyty.
 
-## ✅ Zrobione (Faza 0)
+## ✅ Zrobione (Faza 0 + rygor + library-pack start)
 
-- Harness A/B: runner (izolacja `--setting-sources project`, pinowany model, sanity gate,
-  ukryte asercje, obsługa nieodbytych runów, circuit breaker), smoke test, TSV + summarize
-- 7 zadań w 4 zweryfikowanych klasach; rubryka projektowa potwierdzona danymi
-- **Wyniki N=10** (Fisher p<1e-4): zero-signal A 0/10 vs B 10/10; local-lie@scale A 1/10 vs B 10/10;
-  grep-findable = cost-only (−50% @ 120 plikach). Łączny koszt eksperymentów ~$21
+- Harness A/B(+C): runner (izolacja `--setting-sources project`, pinowany model, sanity gate,
+  ukryte asercje, obsługa nieodbytych runów, circuit breaker, `cli_version` w TSV,
+  per-task `VARIANTS` + `CONFIG_<X>`), smoke test, TSV + summarize
+- **Rygor statystyczny**: Wilson 95% CI + Fisher exact + pass^n w summarize; oracle solutions
+  (`cf-bench/oracles/`) + `validate-tasks.sh` (outcome validity, egzekwowane w smoke)
+- **10 zadań w 5 klasach** (rubryka: docs/TASK-DESIGN.md); 4 silne dyskryminatory z 4 różnych klas:
+  - encoded-decision: js-stack-002 (N=10: A 0% vs B 100%, p=2.4e-06)
+  - local-lie@scale: js-brown-cents-xl-007 (N=15/10: A 7% vs B 100%, p=2.1e-07)
+  - config-lies: js-config-lies-008 (N=5: A 100% vs B 0%, p=0.008 — kłamiący config ODWRACA
+    wynik, taniej o 9.8%; "cheaper, faster, confidently wrong")
+  - library-convention: js-rxjs-submit-009 (N=5: A 0% vs B 100%, p=0.008 — flip na MAŁYM
+    fixture, bez szumu; wybór operatora rxjs niewywnioskowalny z sąsiedztwa)
+- Wariant **C (placebo)**: configs/generic/, włączony na js-stack-002 — obrona przed
+  "sami napisaliście configi" (C≈A = efekt to wiedza, nie obecność pliku). NIEZMIERZONY.
+- Library-pack technika: wendorowane node_modules (rxjs 4.5MB, express 3.9MB), zero npm install;
+  express-010 zreklasyfikowany cost-only (A 5/5, sygnał app.js za mocny w małym repo)
+- Researche: `RESEARCH-AI-BENCHMARKS-2026-07-17.md` (SWE-bench kontaminacja, Terminal-Bench
+  oracle, tau-bench pass^k, HAL, SkillsBench/ETH jako walidacja niszy i timing publikacji),
+  `RESEARCH-LIBRARY-TARGETS-2026-07-18.md` (listy popularność/trudność-dla-AI, scoring,
+  top-10 celów, proces półautomatyczny z ludzką kalibracją — NIE auto-generacja)
 - Draft artykułu v2 (`content/draft-brownfield-traps.md`) — czeka na recenzję Lukasza
 - Rutyna researchowa (program + skrypt + launchd instrukcja), 2 sugestie dla context-forge
-- **Research benchmarków AI** (`RESEARCH-AI-BENCHMARKS-2026-07-17.md`): SWE-bench (kryzys
-  kontaminacji), Terminal-Bench (oracle solutions), tau-bench (pass^k), HAL (cost-aware),
-  SkillsBench + ETH AGENTS.md + "context files hurt" (walidacja tezy i timing publikacji)
-- **Upgrade rygoru wg research**: summarize.sh z Wilson 95% CI + Fisher exact + pass^n;
-  oracle solutions (`cf-bench/oracles/`) + `validate-tasks.sh` (outcome validity, w smoke);
-  nowa klasa zadań **config-lies** (js-config-lies-008, kalibracja czeka na budżet)
+- Łączny koszt eksperymentów dotąd: ~$25
 
-## 🔜 Najbliższe (kolejność rekomendowana)
+## 🔜 Najbliższe (kolejność rekomendowana — nowa sesja)
 
-1. **[LUKASZ] Recenzja draftu** — bez tego nie ruszamy publikacji
-2. **Open-source prep** (warunek Show HN): wydzielone publiczne repo cf-bench, licencja (MIT?),
-   README EN z metodologią, surowe TSV w repo, skrypt reprodukcji; przejście `plugin-audit`-owego
-   poziomu rygoru na kod publiczny
-3. **Publikacja**: dev.to (pełny tekst) → Show HN (`Show HN: I set traps for AI coding agents...`)
-   → r/ClaudeAI, X thread; wg playbooka z GTM doc (odpowiadanie w pierwszej godzinie HN)
-4. **[LUKASZ, 5 min] launchd** dla cotygodniowego research-scan (`research-routine/README-SCHEDULING.md`)
-5. ✅ **Kalibracja config-lies (2026-07-18)**: A 100% vs B 0% (N=5, p=0.008), koszt B −9.8% —
-   agent nigdy nie kwestionuje kłamiącego configu ("taniej i pewniej, ale źle"). Kandydat na
-   sekcję draftu / osobny post; wzmacnia produkt audytowy
-6. **[BUDŻET ~$1.5] Wariant C (placebo) na flagship** — js-stack-002, N=10 wariant C;
-   domyka zarzut "sami napisaliście configi"
+1. **Rozbudowa Angular/RxJS packa** (żyła potwierdzona p=0.008; szablon: konwencja użycia
+   biblioteki + mylący sąsiad): rxjs catchError-w-pipe, rxjs takeUntil/teardown,
+   share/shareReplay; express-errors-XL (szum + zakopany error-handler) jako test hipotezy
+   "sygnał middleware słabnie ze skalą". Każde zadanie: oracle + sanity anty-wzorca +
+   kalibracja N=5 (~$1.4/zadanie)
+2. **Zamrożenie zestawu → finalna macierz N=10 z wariantem C** na wszystkich zadaniach
+   dyskryminujących + C na flagshipach, jedna świeża macierz (spójna wersja CLI);
+   szacunek ~$30–40 [BUDŻET — zgoda przed startem]
+3. **[LUKASZ] Recenzja draftu** + decyzja: sekcja config-lies w drafcie czy osobny post
+4. **Open-source prep** (warunek Show HN): wydzielone publiczne repo, licencja (MIT?),
+   README EN, surowe TSV, skrypt reprodukcji; decyzja held-out (część zadań prywatna —
+   wzorzec SWE-bench Pro)
+5. **Publikacja**: dev.to → Show HN → r/ClaudeAI, X; playbook z GTM doc
+6. **[LUKASZ, 5 min] launchd** dla research-scan (`research-routine/README-SCHEDULING.md`)
 
 ## 📦 Faza następna (po publikacji)
 
-- ✅ **Library-pack start (2026-07-18)**: rxjs (exhaustMap dla submitów) + express (next(err)
-  do centralnego middleware) — biblioteki wendorowane do fixtures, zero npm install.
-  Wzorzec: konwencja użycia biblioteki, nie znajomość API. **Kalibracja N=5: rxjs
-  A 0/5 vs B 5/5 (p=0.008) — pełny dyskryminator bez skali; express A 5/5 = cost-only
-  (−7.9%), kandydat na XL.** Nowe klasy-kandydatki: rxjs error-handling (catchError
-  w pipe), rxjs teardown (takeUntil), express middleware order.
-- **Library targets zbadane** (`RESEARCH-LIBRARY-TARGETS-2026-07-18.md`): top-10 celów wg
-  score popularność×trudność×testowalność×nisza; proces = szablony + ludzka kalibracja
-  (NIE auto-generacja); produktowo: stack-packi (Angular/RxJS pack pierwszy)
-- **Angular/Nx brownfield fixture** — wejście w niszę docelową; decyzja techniczna do podjęcia:
-  cache `node_modules` między runami (kopiowanie ~300MB/run vs współdzielony store vs pnpm).
-  Ta sama decyzja odblokowuje React/Jest/Karma/Jasmine (za ciężkie do wendorowania)
-- **Cross-agent**: adapter na Codex CLI / Cursor CLI (przewaga, której Anthropic nie zrobi);
-  wymaga abstrakcji `agent adapter` w runnerze — dopiero wtedy, nie wcześniej
-- **Multi-model**: te same zadania na haiku/opus — czy tania inteligencja zmienia taksonomię?
-- Dalsze klasy zadań: stale dokumentacja (README kłamie), martwe ścieżki kodu, konflikt
-  CLAUDE.md vs rzeczywistość (config też może kłamać — miara zaufania)
+- **Angular/Nx brownfield fixture** — decyzja techniczna: cache `node_modules` między runami
+  (kopiowanie ~300MB/run vs współdzielony store vs pnpm). Odblokowuje też React/Jest/Karma/
+  Jasmine (za ciężkie do wendorowania) i Angular-migracje (signals vs NgModules —
+  version-drift trap, top-2 na liście celów)
+- **Python-api-pack**: Pydantic 1→2, FastAPI, SQLAlchemy 2.0 (pip --target = wendorowalne;
+  deprecated-API trap — modele trzymają się starych wzorców, >50% porażek = złe użycie API)
+- **Cross-agent**: adapter Codex CLI / Cursor CLI; wymaga abstrakcji `agent adapter` w runnerze
+- **Multi-model**: haiku/opus — czy tania inteligencja zmienia taksonomię pułapek?
+- Dalsze klasy: stale docs (README kłamie), martwe ścieżki kodu, LangChain version-pinning
+  (regression-watch story)
 
 ## 💰 Monetyzacja (gated — patrz RESEARCH-BENCHMARK-MONETIZATION)
 
-- **Gate 1**: publikacja przynosi trakcję (gwiazdki/dyskusję) → budować leaderboard configów
+- **Gate 1**: publikacja przynosi trakcję (gwiazdki/dyskusję) → leaderboard configów
 - **Gate 2**: 1 płacący klient (regression-watch $19–99/mies. albo audyt $300–1500) **zanim**
   powstanie cokolwiek hosted
-- Regression-watch MVP: cron + cf-bench na configu klienta po każdym update modelu/CLI + raport delta
+- Stack-packi jako oferta audytu per-stack (Angular/RxJS pack pierwszy — nisza Lukasza)
+- Regression-watch MVP: cron + cf-bench na configu klienta po każdym update modelu/CLI + delta
 
 ## 🔧 Dla context-forge (kolejka w context-forge-suggestions/)
 
@@ -69,4 +75,5 @@ Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 ## Zasady niezmienne
 
 Metrics-first (żadnych twierdzeń bez pomiaru) · determinizm oceny (nigdy LLM-judge) ·
-local-first, flat files · hosted dopiero po pierwszym płacącym kliencie · budżet runów za zgodą.
+local-first, flat files · hosted dopiero po pierwszym płacącym kliencie · budżet runów za zgodą ·
+zadanie wchodzi do zestawu TYLKO po kalibracji (N≥5 w widełkach klasy).
