@@ -82,6 +82,14 @@ Pułapka = sąsiedni plik pokazuje wzorzec poprawny dla INNEGO przypadku (rxjs: 
 w search.js vs exhaustMap dla submitów; express: inline res.status w legacy users.js vs
 next(err) do centralnego middleware). Zadania: js-rxjs-submit-009, js-express-errors-010.
 
+**Kalibracja 2026-07-18 (N=5, sonnet)**:
+- js-rxjs-submit-009: **A 0/5 vs B 5/5 (p=0.008), koszt B −2.5%** — pełny dyskryminator
+  na MAŁYM fixture (bez skali!). Konwencja operatorowa rxjs nie jest wywnioskowalna
+  z sąsiedztwa — sąsiad switchMap skutecznie myli. Najlepszy stosunek siły do rozmiaru.
+- js-express-errors-010: A 5/5 = nie dyskryminuje sukcesu (sygnał centralnego middleware
+  w app.js za mocny w małym repo — ta sama lekcja co brown-errors small). Koszt −7.9%.
+  Klasyfikacja: cost-only; kandydat na wersję XL (szum + zakopanie error-handlera).
+
 Technika: biblioteka WENDOROWANA — `node_modules/` commitowane do fixture (rxjs przycięty
 do dist/, ~4.5MB; express tree ~3.9MB), zero npm install w runie (zasada twarda 3 zachowana).
 `.gitignore` ma wyjątek `!cf-bench/fixtures/*/node_modules/`.

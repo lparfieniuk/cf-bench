@@ -1,0 +1,11 @@
+ts	task	variant	repeat	model	success	cost_usd	turns	duration_ms	in_tokens	cache_creation	cache_read	out_tokens	terminal_reason	session_id	cli_version
+2026-07-18T09:20:36	js-express-errors-010	A	1	sonnet	1	0.1406045	11	24259	10	12684	130325	1646	completed	ea4a0426-7cc9-4c5c-b2ad-7660e4523e94	2.1.212 (Claude Code)
+2026-07-18T09:21:08	js-express-errors-010	A	2	sonnet	1	0.16035970000000002	11	30177	12	13200	160469	2154	completed	5fc8a9b8-e2d6-40e6-bdee-c1da9e3d1535	2.1.212 (Claude Code)
+2026-07-18T09:21:34	js-express-errors-010	A	3	sonnet	1	0.1513625	12	24085	10	13277	131225	2108	completed	5ffea424-b3f3-4211-b61d-e970028bda0a	2.1.212 (Claude Code)
+2026-07-18T09:21:56	js-express-errors-010	A	4	sonnet	1	0.1422252	10	20761	10	12890	131224	1654	completed	fb8fccd6-cb51-420e-aac1-18b0723fa5c0	2.1.212 (Claude Code)
+2026-07-18T09:22:25	js-express-errors-010	A	5	sonnet	1	0.15218060000000003	12	27121	10	13253	131182	2173	completed	25d51682-cbaa-41d1-bf55-ab13ddedb600	2.1.212 (Claude Code)
+2026-07-18T09:22:44	js-express-errors-010	B	1	sonnet	1	0.13966459999999997	10	18393	10	12848	131412	1496	completed	1795b2a5-7b35-4cca-a56e-3b108b9f40ed	2.1.212 (Claude Code)
+2026-07-18T09:23:10	js-express-errors-010	B	2	sonnet	1	0.1377746	10	23811	10	12755	131072	1414	completed	05b042ae-e398-4978-92c9-1cc1877839bf	2.1.212 (Claude Code)
+2026-07-18T09:23:30	js-express-errors-010	B	3	sonnet	1	0.1394348	10	19002	10	12824	131226	1494	completed	d64c3247-f9da-42d5-a55a-17906607ed8c	2.1.212 (Claude Code)
+2026-07-18T09:23:55	js-express-errors-010	B	4	sonnet	1	0.1393787	10	23765	10	12813	131209	1496	completed	e7ae889b-77f7-489e-a200-62724f807d8c	2.1.212 (Claude Code)
+2026-07-18T09:24:19	js-express-errors-010	B	5	sonnet	1	0.14061349999999997	10	23197	10	12847	131245	1564	completed	2833995e-1b29-4eab-8b98-d9174a310111	2.1.212 (Claude Code)
