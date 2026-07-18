@@ -1,4 +1,4 @@
-# Roadmapa cf-bench (stan: 2026-07-18, po library-pack + research celów)
+# Roadmapa cf-bench (stan: 2026-07-18 po rozbudowie rxjs-packa i regule kontestowanego prioru)
 
 Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 Ścieżka: OSS harness → leaderboard/publikacje → płatny regression-watch + audyty.
@@ -29,13 +29,22 @@ Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 - Rutyna researchowa (program + skrypt + launchd instrukcja), 2 sugestie dla context-forge
 - Łączny koszt eksperymentów dotąd: ~$25
 
-## 🔜 Najbliższe (kolejność rekomendowana — nowa sesja)
+## ✅ Dowiezione 2026-07-18 (sesja rxjs-pack, ~$7)
 
-1. **Rozbudowa Angular/RxJS packa** (żyła potwierdzona p=0.008; szablon: konwencja użycia
-   biblioteki + mylący sąsiad): rxjs catchError-w-pipe, rxjs takeUntil/teardown,
-   share/shareReplay; express-errors-XL (szum + zakopany error-handler) jako test hipotezy
-   "sygnał middleware słabnie ze skalą". Każde zadanie: oracle + sanity anty-wzorca +
-   kalibracja N=5 (~$1.4/zadanie)
+- 5 nowych zadań skalibrowanych N=5: 011 catchError (cost-only −18.7%), 012 withLatestFrom
+  (MARTWE: Δ=0 — usunąć/wymienić przed zamrożeniem), 013 shareReplay (cost-only −8.9%),
+  014 express-XL (cost-at-scale −28.6%, tury 16→9; hipoteza "middleware słabnie ze skalą"
+  OBALONA), **015 refresh-exhaustMap: A 60% vs B 100%, Δ+40pp — w widełkach klasy 2**
+- **Reguła kontestowanego prioru** (TASK-DESIGN): dyskryminuje tylko polityka SPRZECZNA
+  z priorem treningowym; kanoniczne konwencje = zawsze cost-only. Litmus: "czy senior bez
+  kontekstu firmy odpowie jednoznacznie?" TAK → nie buduj. Potwierdzona testem kontrolnym 015.
+- takeUntil/teardown odrzucone świadomie: nierozróżnialne behawioralnie (unsubscribe ≡ takeUntil)
+
+## 🔜 Najbliższe (kolejność rekomendowana)
+
+1. **Decyzja o 012** (usunąć vs przeprojektować na kontestowane) + ewentualnie 1–2 zadania
+   z pre-filtrem kontestowanego prioru (kandydaci: debounce-vs-throttle dla scroll,
+   startWith-vs-initial-state, retry-fetch policy)
 2. **Zamrożenie zestawu → finalna macierz N=10 z wariantem C** na wszystkich zadaniach
    dyskryminujących + C na flagshipach, jedna świeża macierz (spójna wersja CLI);
    szacunek ~$30–40 [BUDŻET — zgoda przed startem]

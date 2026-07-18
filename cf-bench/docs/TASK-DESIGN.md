@@ -112,6 +112,14 @@ płacisz za pomiar tego, gdzie twój zespół od nich odchodzi.)
 Wszystkie 4: oracle + sanity anty-wzorca (anty-wzorzec przechodzi widoczne, failuje hidden)
 zweryfikowane przed kalibracją. Dane: results/bench-20260718-101708.tsv.
 
+**Test kontrolny reguły — js-rxjs-refresh-015 (2026-07-18, N=5, sonnet)**: polityka
+exhaustMap dla refresh-buttona (kanon dla read = switchMap; sąsiad typeahead.js wzmacnia
+złą odpowiedź). Predykcja reguły: A powinno failować. **Wynik: A 60% (3/5) vs B 100%
+(5/5), Δ+40pp, koszt −14.4%** — pierwsze zadanie rxjs W WIDEŁKACH klasy 2 (A 20–70%);
+009 to klasa "pełny flip" (A 0%). Reguła potwierdzona kierunkowo (p=0.444, N=5 —
+wymaga N=10 w finalnej macierzy). Pre-filtr przy projektowaniu zadań library-convention:
+budować TYLKO konwencje kontestowane; kanoniczne mierzyć co najwyżej jako koszt.
+
 **Odrzucone: takeUntil/teardown** (z roadmapy). Konwencja teardown NIE jest behawioralnie
 dyskryminowalna: `subscription.unsubscribe()` w destroy() jest obserwacyjnie równoważne
 `takeUntil(destroy$)` — ukryty test nie odróżni formy bez grepowania źródła, a check na formę

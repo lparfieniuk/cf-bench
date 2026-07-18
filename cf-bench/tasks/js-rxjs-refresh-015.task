@@ -1,0 +1,15 @@
+# CLASS: conflicting-signal (library convention, 2c) — CONTESTED convention test for the
+#        design rule "only policy that contradicts the training prior discriminates":
+#        canonical answer for a read/refresh trigger is switchMap (cancel stale), reinforced
+#        by neighbor typeahead.js; team policy is exhaustMap (ignore refresh spam).
+# GAP: "refresh/reload triggers use exhaustMap ... switchMap is for typeahead queries only" (configs/js-rxjs-refresh-b/CLAUDE.md)
+# HYPOTHESIS: A picks switchMap (canonical for reads + neighbor pattern) or mergeMap — both
+#             start/restart a load on the spam click and fail the hidden ignore-in-flight test
+TASK_ID="js-rxjs-refresh-015"
+PROMPT="Implement refreshData(clicks\$, loadFn) in src/refresh.js: clicks\$ emits when the user clicks Refresh, loadFn() returns an Observable that performs one dashboard load; the returned Observable emits the loaded dashboard data. Follow the project's RxJS conventions. Make npm test pass; do not modify the tests."
+FIXTURE="js-rxjs-refresh"
+CONFIG="js-rxjs-refresh-b"
+HIDDEN="js-rxjs-refresh-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"
