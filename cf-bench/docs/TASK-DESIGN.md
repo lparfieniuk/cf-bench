@@ -32,12 +32,14 @@ spełnia (100% sukcesu w A i B) — służy jako smoke/koszt-only.
    wygrywa z błędnym priorytetem. Rdzeń wartości dla brownfield/legacy.
 3. **cost-only** — oba warianty przechodzą, config tnie koszt/tury (ts-mini-001, js-dist-003).
    Trzymamy 1–2 takie dla metryki kosztowej, nie liczą się do dyskryminacji.
-4. **config-lies** (js-config-lies-008, NIEKALIBROWANA — czeka na budżet) — config twierdzi
+4. **config-lies** (js-config-lies-008, SKALIBROWANA 2026-07-18, N=5 sonnet) — config twierdzi
    NIEPRAWDĘ względem repo; semantyka A/B odwrócona: B jest sabotowane, mierzymy ślepe
-   zaufanie do configu (oczekiwane Δ B-A ≤ 0). Motywacja: literatura 2026 ("context files
-   hurt", SkillsBench: comprehensive docs −2.9pp) — miara zaufania jako produkt audytowy.
-   Dla tej klasy cel kalibracyjny: A wysokie, B ISTOTNIE niższe; Δ=0 = model odporny na
-   kłamiący config (też cenny wynik).
+   zaufanie do configu. **Wynik: A 100% (5/5) vs B 0% (0/5), Fisher p=0.008; koszt B −9.8%.**
+   Agent ANI RAZU nie zakwestionował kłamiącego configu mimo sprzecznych dowodów w repo —
+   config jest w pełni zaufanym single point of failure. Narracja: "taniej i pewniej,
+   ale źle" — stale config nie degraduje wyniku, on go ODWRACA. Motywacja: literatura 2026
+   ("context files hurt", SkillsBench: comprehensive docs −2.9pp); to nasz pomiar wartości
+   audytu configów (produkt).
 
 **Lekcja z obalenia hipotezy js-dist**: pułapki odkrywalne mechanicznie (śledzenie importów,
 czytanie package.json) NIE dyskryminują — nowoczesne modele robią to niezawodnie. Dyskryminuje

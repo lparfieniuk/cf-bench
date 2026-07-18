@@ -28,8 +28,11 @@ Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 3. **Publikacja**: dev.to (pełny tekst) → Show HN (`Show HN: I set traps for AI coding agents...`)
    → r/ClaudeAI, X thread; wg playbooka z GTM doc (odpowiadanie w pierwszej godzinie HN)
 4. **[LUKASZ, 5 min] launchd** dla cotygodniowego research-scan (`research-routine/README-SCHEDULING.md`)
-5. **[BUDŻET ~$1.5] Kalibracja config-lies** — js-config-lies-008, N=5 A/B (10 runów × ~$0.13);
-   wynik zasila draft (spór "context files hurt" rozstrzygany pomiarem)
+5. ✅ **Kalibracja config-lies (2026-07-18)**: A 100% vs B 0% (N=5, p=0.008), koszt B −9.8% —
+   agent nigdy nie kwestionuje kłamiącego configu ("taniej i pewniej, ale źle"). Kandydat na
+   sekcję draftu / osobny post; wzmacnia produkt audytowy
+6. **[BUDŻET ~$1.5] Wariant C (placebo) na flagship** — js-stack-002, N=10 wariant C;
+   domyka zarzut "sami napisaliście configi"
 
 ## 📦 Faza następna (po publikacji)
 
