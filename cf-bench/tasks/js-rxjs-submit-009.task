@@ -1,0 +1,14 @@
+# CLASS: conflicting-signal (library convention) — neighbor search.js shows switchMap as the
+#        "house pattern ... at most one in-flight request"; correct choice for a WRITE effect
+#        is exhaustMap (ignore re-clicks), encoded only in config
+# GAP: "button-triggered effects use exhaustMap ... switchMap is for read-only typeahead only" (configs/js-rxjs-submit-b/CLAUDE.md)
+# HYPOTHESIS: A imitates the neighbor's switchMap (or picks mergeMap/concatMap default) — all
+#             submit twice on double-click and fail the hidden policy test
+TASK_ID="js-rxjs-submit-009"
+PROMPT="Implement submitOrders(clicks\$, submitFn) in src/orders.js: clicks\$ emits order payloads, submitFn(payload) returns an Observable of the confirmation; the returned Observable emits confirmations. Follow the project's RxJS conventions. Make npm test pass; do not modify the tests."
+FIXTURE="js-rxjs-submit"
+CONFIG="js-rxjs-submit-b"
+HIDDEN="js-rxjs-submit-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

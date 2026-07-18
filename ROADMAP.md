@@ -36,8 +36,12 @@ Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
 
 ## 📦 Faza następna (po publikacji)
 
+- ✅ **Library-pack start (2026-07-18)**: rxjs (exhaustMap dla submitów) + express (next(err)
+  do centralnego middleware) — biblioteki wendorowane do fixtures, zero npm install.
+  Kalibracja N=5 w toku. Wzorzec: konwencja użycia biblioteki, nie znajomość API.
 - **Angular/Nx brownfield fixture** — wejście w niszę docelową; decyzja techniczna do podjęcia:
-  cache `node_modules` między runami (kopiowanie ~300MB/run vs współdzielony store vs pnpm)
+  cache `node_modules` między runami (kopiowanie ~300MB/run vs współdzielony store vs pnpm).
+  Ta sama decyzja odblokowuje React/Jest/Karma/Jasmine (za ciężkie do wendorowania)
 - **Cross-agent**: adapter na Codex CLI / Cursor CLI (przewaga, której Anthropic nie zrobi);
   wymaga abstrakcji `agent adapter` w runnerze — dopiero wtedy, nie wcześniej
 - **Multi-model**: te same zadania na haiku/opus — czy tania inteligencja zmienia taksonomię?

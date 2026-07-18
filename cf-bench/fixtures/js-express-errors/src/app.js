@@ -1,0 +1,13 @@
+import express from 'express';
+import { usersRouter } from './routes/users.js';
+import { refundsRouter } from './routes/refunds.js';
+import { errorHandler } from './middleware/error-handler.js';
+
+export function createApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/users', usersRouter);
+  app.use('/refunds', refundsRouter);
+  app.use(errorHandler);
+  return app;
+}

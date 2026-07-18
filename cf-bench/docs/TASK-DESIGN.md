@@ -75,6 +75,19 @@ Reguła projektowa: dyskryminacja sukcesu wymaga złej wskazówki LOKALNIE + pra
 - klasa 3: A=B≈100%, Δkosztu < 0
 - poza widełkami → przeprojektowanie albo świadoma reklasyfikacja
 
+## Podklasa: library-convention (2c) — od 2026-07-18
+
+Konwencja zespołowa UŻYCIA popularnej biblioteki (nie znajomość API — tę model ma z treningu).
+Pułapka = sąsiedni plik pokazuje wzorzec poprawny dla INNEGO przypadku (rxjs: switchMap
+w search.js vs exhaustMap dla submitów; express: inline res.status w legacy users.js vs
+next(err) do centralnego middleware). Zadania: js-rxjs-submit-009, js-express-errors-010.
+
+Technika: biblioteka WENDOROWANA — `node_modules/` commitowane do fixture (rxjs przycięty
+do dist/, ~4.5MB; express tree ~3.9MB), zero npm install w runie (zasada twarda 3 zachowana).
+`.gitignore` ma wyjątek `!cf-bench/fixtures/*/node_modules/`.
+Poza zasięgiem do decyzji o cache node_modules (ROADMAP): Angular/Karma/Jasmine/Jest/React —
+pełny toolchain, nie da się sensownie wendorować.
+
 ## Wariant C (placebo) — obrona przed "sami napisaliście configi"
 
 Dla zadań flagowych dodaj `VARIANTS="A B C"` + `CONFIG_C="generic"` (configs/generic/ —
