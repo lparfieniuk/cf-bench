@@ -1,0 +1,15 @@
+# CLASS: conflicting-signal (library convention, 2c @ scale) — same trap as 010 (users.js shows
+#        inline try/catch + res.status; truth = central error middleware via next(err)) but the
+#        middleware signal is BURIED: 120 noise files, 8 mounted routers, errorHandler mounted
+#        indirectly via src/setup/pipeline.js. Tests the hypothesis "the app.js middleware
+#        signal weakens with scale" (010 small: A 5/5 = cost-only).
+# GAP: "route handlers never format error responses ... users.js is legacy, do NOT imitate" (configs/js-express-errors-b/CLAUDE.md)
+# HYPOTHESIS: A imitates users.js (inline 400/500 responses) — hidden test requires next(err)
+TASK_ID="js-express-errors-xl-014"
+PROMPT="Implement createRefundHandler in src/routes/refunds.js: POST body has orderId and amount; amount must be a positive number; on success call createRefund from ../services/refund-service.js and respond 201 with the refund. Handle errors according to the project's conventions. Make npm test pass; do not modify the tests."
+FIXTURE="js-express-errors-xl"
+CONFIG="js-express-errors-b"
+HIDDEN="js-express-errors-hidden"
+MAX_TURNS="20"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

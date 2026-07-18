@@ -1,0 +1,14 @@
+# CLASS: conflicting-signal (library convention, 2c) — neighbor bus.js shows share() as the
+#        house multicast pattern (correct for a live event bus); a cached singleton needs
+#        shareReplay(1) or late subscribers get nothing and re-trigger the upstream fetch.
+# GAP: "cached singleton streams (app config, feature flags) use shareReplay(1) ... share() replays nothing and RE-SUBSCRIBES a completed source" (configs/js-rxjs-share-b/CLAUDE.md)
+# HYPOTHESIS: A imitates bus.js (share()) — passes the visible concurrent-subscriber test but
+#             fails the hidden late-subscriber test (no replay + second fetch)
+TASK_ID="js-rxjs-share-013"
+PROMPT="Implement appConfig(fetchFn) in src/app-config.js: fetchFn() returns an Observable that performs one config fetch; the returned Observable delivers the config to every subscriber without running the fetch once per subscriber. Follow the project's RxJS conventions. Make npm test pass; do not modify the tests."
+FIXTURE="js-rxjs-share"
+CONFIG="js-rxjs-share-b"
+HIDDEN="js-rxjs-share-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

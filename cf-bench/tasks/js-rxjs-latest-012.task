@@ -1,0 +1,14 @@
+# CLASS: conflicting-signal (library convention, 2c) — neighbor summary.js shows combineLatest
+#        as the house pattern for pairing streams (correct for a live VIEW); pairing an ACTION
+#        stream with data requires withLatestFrom, or data edits re-fire the effect.
+# GAP: "action/trigger streams read companion data with withLatestFrom ... combineLatest re-fires the effect when the data changes too" (configs/js-rxjs-latest-b/CLAUDE.md)
+# HYPOTHESIS: A imitates summary.js (combineLatest) — a cart edit re-places the order and fails
+#             the hidden trigger-only test
+TASK_ID="js-rxjs-latest-012"
+PROMPT="Implement placeOrders(clicks\$, cart\$) in src/place-order.js: cart\$ emits the current cart (an array of items), clicks\$ emits when the user clicks Place Order; the returned Observable emits the cart snapshot to submit for each placed order. Follow the project's RxJS conventions. Make npm test pass; do not modify the tests."
+FIXTURE="js-rxjs-latest"
+CONFIG="js-rxjs-latest-b"
+HIDDEN="js-rxjs-latest-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

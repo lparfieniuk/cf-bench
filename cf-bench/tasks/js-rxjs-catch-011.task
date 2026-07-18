@@ -1,0 +1,15 @@
+# CLASS: conflicting-signal (library convention, 2c) — neighbor report.js shows catchError on
+#        the OUTER pipe (correct for a one-shot load); in a long-lived effect stream an outer
+#        catchError terminates the stream on the first failure. Policy: catchError INSIDE the
+#        flattening operator's inner Observable.
+# GAP: "long-lived effect streams put catchError INSIDE the flattening operator's inner Observable ... outer catchError terminates the whole stream" (configs/js-rxjs-catch-b/CLAUDE.md)
+# HYPOTHESIS: A imitates report.js (outer catchError) or omits error handling — both kill the
+#             stream on the first failed save and fail the hidden survival test
+TASK_ID="js-rxjs-catch-011"
+PROMPT="Implement autoSave(changes\$, saveFn) in src/autosave.js: changes\$ emits document snapshots, saveFn(doc) returns an Observable of the save receipt; the returned Observable emits the receipts in order. saveFn can error — handle errors according to the project's RxJS conventions. Make npm test pass; do not modify the tests."
+FIXTURE="js-rxjs-catch"
+CONFIG="js-rxjs-catch-b"
+HIDDEN="js-rxjs-catch-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"
