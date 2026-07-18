@@ -42,6 +42,9 @@ Teza: **nie sprzedajemy reguł — sprzedajemy dowód, że config działa.**
   A 0/5 vs B 5/5 (p=0.008) — pełny dyskryminator bez skali; express A 5/5 = cost-only
   (−7.9%), kandydat na XL.** Nowe klasy-kandydatki: rxjs error-handling (catchError
   w pipe), rxjs teardown (takeUntil), express middleware order.
+- **Library targets zbadane** (`RESEARCH-LIBRARY-TARGETS-2026-07-18.md`): top-10 celów wg
+  score popularność×trudność×testowalność×nisza; proces = szablony + ludzka kalibracja
+  (NIE auto-generacja); produktowo: stack-packi (Angular/RxJS pack pierwszy)
 - **Angular/Nx brownfield fixture** — wejście w niszę docelową; decyzja techniczna do podjęcia:
   cache `node_modules` między runami (kopiowanie ~300MB/run vs współdzielony store vs pnpm).
   Ta sama decyzja odblokowuje React/Jest/Karma/Jasmine (za ciężkie do wendorowania)
