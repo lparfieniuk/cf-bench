@@ -17,8 +17,9 @@ specific config. So measure yours.
 
 ## What it found
 
-Every number below is from the raw TSVs in [`cf-bench/results/`](cf-bench/results/), Claude Code
-headless, pinned `sonnet`, isolated from user-level config. `p` = Fisher exact (two-sided) on success,
+Every number below is from the raw TSVs in [`cf-bench/results/`](cf-bench/results/) — indexed in
+[`results/README.md`](cf-bench/results/README.md), which says exactly which file backs which claim.
+Claude Code headless, pinned `sonnet`, isolated from user-level config. `p` = Fisher exact (two-sided) on success,
 or Mann-Whitney U on cost where success does not move.
 
 | Task | Class | N (A/B) | A | B | p | Δcost |
