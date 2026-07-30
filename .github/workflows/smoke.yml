@@ -1,0 +1,20 @@
+name: smoke
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Fixture deps are pinned in lockfiles; runs stay offline after this step.
+      - run: cf-bench/runner/setup-fixtures.sh
+      # Mocks the agent, so this costs nothing and needs no API key: asserts the
+      # TSV contract, the hidden-assertion gate, the placebo arm, and proves every
+      # task is broken pre-oracle and solvable post-oracle.
+      - run: bash cf-bench/test/smoke.sh
