@@ -19,11 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Third-party code: benchmark fixtures depend on third-party npm packages (express,
-rxjs and their transitive dependencies), pinned in each fixture's
-package-lock.json and installed locally by cf-bench/runner/setup-fixtures.sh.
-Those packages are not distributed with this repository and remain subject to
-their own licenses. The MIT grant above applies only to the code authored here.
