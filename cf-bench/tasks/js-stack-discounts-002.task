@@ -6,8 +6,12 @@ FIXTURE="js-stack"
 CONFIG="js-stack-b"
 # C = placebo: generic best-practices config with ZERO task knowledge. Expected C≈A —
 # proves the B effect comes from encoded knowledge, not from mere presence of a CLAUDE.md.
-VARIANTS="A B C"
+# D = ContextForge always-on core (configs/cf-core), ZERO task knowledge. The honest read is
+# D vs C: C already controls for "any CLAUDE.md present", so D-C isolates CF's efficiency rules.
+# Expected D≈C on success (no cap knowledge → fails like A/C), D<C on cost/turns iff the rules help.
+VARIANTS="A B C D"
 CONFIG_C="generic"
+CONFIG_D="cf-core"
 HIDDEN="js-stack-hidden"
 MAX_TURNS="12"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"

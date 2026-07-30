@@ -1,153 +1,152 @@
-# Projektowanie zadań cf-bench (rubryka)
+# cf-bench task design (rubric)
 
-Zadanie jest dobre, gdy **config decyduje o sukcesie**, nie tylko o koszcie. ts-mini-001 tego nie
-spełnia (100% sukcesu w A i B) — służy jako smoke/koszt-only.
+A task is good when **the config decides success**, not just cost. ts-mini-001 does not meet that bar
+(100% success in both A and B) — it serves as a smoke/cost-only task.
 
-## Wymagania twarde (każde zadanie)
+## Hard requirements (every task)
 
-1. **GAP zadeklarowany**: nagłówek `.task` wskazuje, która linia configu rozstrzyga zadanie.
-   Bez tej linii wiedza NIE jest w pełni wywnioskowalna z repo (może być częściowo — to OK, mierzymy
-   config vs eksploracja).
-2. **Ukryte asercje**: `HIDDEN="<dir>"` w `.task` → zawartość `fixtures-hidden/<dir>/` kopiowana do
-   workdir PO runie agenta, PRZED finalnym checkiem. Widoczne testy czynią zadanie *podejmowalnym*,
-   ukryte dopinają spec (decyzje projektowe, konwencje, niezmienniki).
-3. **Sanity gate**: check MUSI failować przed runem (egzekwowane przez runner; gate widzi
-   wyłącznie widoczne testy — ukryte wstrzykiwane są dopiero po runie agenta).
-4. **Determinizm**: zero sieci, zero zależności od TZ/zegara/locale, zero npm install. Sukces =
-   exit code, nigdy LLM-judge.
-5. **Trudność z wiedzy, nie z łamigłówki**: sama poprawka trywialna; trudne jest CO/GDZIE zgodnie
-   z polityką projektu. Nie testujemy inteligencji modelu, testujemy wartość configu.
-6. **Oracle solution** (praktyka Terminal-Bench): `oracles/<fixture>.sh` (fallback: nazwa bez
-   sufiksu `-xl`) aplikuje wzorcową poprawkę; `runner/validate-tasks.sh` dowodzi dla każdego
-   zadania, że check failuje przed oraclem i przechodzi po nim (+ hidden). Oracles żyją POZA
-   `fixtures/`, żeby nigdy nie trafiły do workdiru agenta. Egzekwowane w smoke.sh.
+1. **Declared GAP**: the `.task` header names the config line that decides the task. Without that
+   line the knowledge is NOT fully inferable from the repo (partially is fine — we are measuring
+   config vs exploration).
+2. **Hidden assertions**: `HIDDEN="<dir>"` in the `.task` → the contents of `fixtures-hidden/<dir>/`
+   are copied into the workdir AFTER the agent run, BEFORE the final check. Visible tests make the
+   task *attemptable*; hidden ones pin down the spec (design decisions, conventions, invariants).
+3. **Sanity gate**: the check MUST fail before the run (enforced by the runner; the gate only sees
+   the visible tests — hidden ones are injected after the agent run).
+4. **Determinism**: no network, no dependence on TZ/clock/locale, no npm install. Success = exit code,
+   never an LLM judge.
+5. **Difficulty from knowledge, not from puzzle**: the fix itself is trivial; what is hard is
+   WHAT/WHERE according to project policy. We are not testing model intelligence, we are testing the
+   value of the config.
+6. **Oracle solution** (Terminal-Bench practice): `oracles/<fixture>.sh` (fallback: the name without
+   the `-xl` suffix) applies the reference fix; `runner/validate-tasks.sh` proves for every task that
+   the check fails before the oracle and passes after it (+ hidden). Oracles live OUTSIDE `fixtures/`
+   so they never reach the agent's workdir. Enforced in smoke.sh.
 
-## Klasy zadań (po kalibracji 2026-07-16, N=5)
+## Task classes (after the 2026-07-16 calibration, N=5)
 
-1. **encoded-decision** — polityka/decyzja zespołu bez ŻADNEGO sygnału w repo (js-stack-002).
-   A=0% jest tu poprawne: mierzy dokładnie wartość zapisania decyzji w configu. Najsilniejsze
-   dyskryminatory (zmierzone: A 0% vs B 100%, koszt −24%).
-2. **conflicting-signal (brownfield)** — sygnał w repo ISTNIEJE, ale jest sprzeczny (kłamiący
-   komentarz vs kod, dwie konwencje 50/50). A powinno lądować w 20–70% — mierzy, czy config
-   wygrywa z błędnym priorytetem. Rdzeń wartości dla brownfield/legacy.
-3. **cost-only** — oba warianty przechodzą, config tnie koszt/tury (ts-mini-001, js-dist-003).
-   Trzymamy 1–2 takie dla metryki kosztowej, nie liczą się do dyskryminacji.
-4. **config-lies** (js-config-lies-008, SKALIBROWANA 2026-07-18, N=5 sonnet) — config twierdzi
-   NIEPRAWDĘ względem repo; semantyka A/B odwrócona: B jest sabotowane, mierzymy ślepe
-   zaufanie do configu. **Wynik: A 100% (5/5) vs B 0% (0/5), Fisher p=0.008; koszt B −9.8%.**
-   Agent ANI RAZU nie zakwestionował kłamiącego configu mimo sprzecznych dowodów w repo —
-   config jest w pełni zaufanym single point of failure. Narracja: "taniej i pewniej,
-   ale źle" — stale config nie degraduje wyniku, on go ODWRACA. Motywacja: literatura 2026
-   ("context files hurt", SkillsBench: comprehensive docs −2.9pp); to nasz pomiar wartości
-   audytu configów (produkt).
+1. **encoded-decision** — a team policy/decision with NO signal in the repo at all (js-stack-002).
+   A=0% is correct here: it measures exactly the value of writing the decision into the config.
+   The strongest discriminators (measured: A 0% vs B 100%, cost −24%).
+2. **conflicting-signal (brownfield)** — a signal DOES exist in the repo, but it contradicts itself
+   (lying comment vs code, two conventions 50/50). A should land at 20–70% — it measures whether the
+   config beats the wrong prior. The core of the value proposition for brownfield/legacy.
+3. **cost-only** — both variants pass, the config cuts cost/turns (ts-mini-001, js-dist-003).
+   We keep 1–2 of these for the cost metric; they do not count toward discrimination.
+4. **config-lies** (js-config-lies-008, CALIBRATED 2026-07-18, N=5 sonnet) — the config states
+   something UNTRUE about the repo; A/B semantics are inverted: B is sabotaged, and we measure blind
+   trust in the config. **Result: A 100% (5/5) vs B 0% (0/5), Fisher p=0.008; cost of B −9.8%.**
+   The agent did NOT ONCE question the lying config despite contradicting evidence in the repo — the
+   config is a fully trusted single point of failure. The narrative: "cheaper and more confident, but
+   wrong" — a stale config does not degrade the outcome, it INVERTS it. Motivation: the 2026
+   literature ("context files hurt", SkillsBench: comprehensive docs −2.9pp); this is our measurement
+   of the value of config audits (the product).
 
-**Lekcja z obalenia hipotezy js-dist**: pułapki odkrywalne mechanicznie (śledzenie importów,
-czytanie package.json) NIE dyskryminują — nowoczesne modele robią to niezawodnie. Dyskryminuje
-tylko wiedza bez sygnału (klasa 1) albo z sygnałem sprzecznym (klasa 2).
+**Lesson from the refuted js-dist hypothesis**: traps that are mechanically discoverable (following
+imports, reading package.json) do NOT discriminate — modern models do that reliably. Only knowledge
+with no signal (class 1) or with a contradicting signal (class 2) discriminates.
 
-**Lekcja z kalibracji klasy 2 (2026-07-16, N=5, sonnet)**: w MAŁYM fixture (3–5 plików)
-conflicting-signal też nie dyskryminuje sukcesu — A=100% na obu zadaniach (agent rozstrzyga
-konflikt kod-vs-komentarz i wybiera konwencję po sąsiedztwie domenowym). Efekt configu jest za to
-duży kosztowo: −11% do −23% kosztu, tury 9→6/7, output tokens −43% do −53%. Hipoteza robocza:
-"zgubienie w brownfield" wymaga SKALI — sygnał zakopany w setkach plików, eksploracja droga.
-Następna iteracja klasy 2: fixture rozdęty syntetycznym szumem (100+ plausible plików) i/lub
-sygnał przeniesiony daleko od edytowanego pliku. Do tego czasu 004/005 klasyfikować jako
-cost-only o wysokiej delcie.
+**Lesson from the class-2 calibration (2026-07-16, N=5, sonnet)**: in a SMALL fixture (3–5 files)
+conflicting-signal does not discriminate success either — A=100% on both tasks (the agent resolves
+the code-vs-comment conflict and picks the convention from domain-adjacent files). The config's effect
+is large on cost though: −11% to −23% cost, turns 9→6/7, output tokens −43% to −53%. Working
+hypothesis: "getting lost in brownfield" requires SCALE — the signal buried among hundreds of files,
+exploration expensive. Next iteration of class 2: a fixture inflated with synthetic noise (100+
+plausible files) and/or the signal moved far away from the edited file. Until then, classify 004/005
+as cost-only with a high delta.
 
-**Lekcja z eksperymentu skali (2026-07-16, XL = 120 plików szumu, N=5, sonnet)** — skala
-rozszczepia klasę 2 na dwie podklasy o różnym zachowaniu:
+**Lesson from the scale experiment (2026-07-16, XL = 120 noise files, N=5, sonnet)** — scale splits
+class 2 into two subclasses that behave differently:
 
-- **2a. local-lie / distant-truth** (cents-xl: kłamiący komentarz w edytowanym pliku, prawda
-  zakopana w src/lib/money/): skala FLIPUJE sukces — A 100%→**0%** (0/5), B 100%. Agent
-  w dużym repo ufa lokalnemu sygnałowi i nie dociera do odległej prawdy. Najcenniejsza
-  podklasa dla brownfield.
-- **2b. grep-findable convention** (errors-xl: konwencja wyszukiwalna wzorcem w dowolnym
-  pliku): sukcesu NIE flipuje na żadnej skali (A=100%), ale koszt eksploduje — config daje
-  **−50% kosztu, −60% output tokens, czas 72s→26s, tury 16→9**. Klasa "cost-at-scale".
+- **2a. local-lie / distant-truth** (cents-xl: a lying comment in the edited file, the truth buried in
+  src/lib/money/): scale FLIPS success — A 100%→**0%** (0/5), B 100%. In a large repo the agent trusts
+  the local signal and never reaches the distant truth. The most valuable subclass for brownfield.
+- **2b. grep-findable convention** (errors-xl: a convention findable by pattern in any file): success
+  does NOT flip at any scale (A=100%), but cost explodes — the config yields **−50% cost, −60% output
+  tokens, time 72s→26s, turns 16→9**. The "cost-at-scale" class.
 
-Reguła projektowa: dyskryminacja sukcesu wymaga złej wskazówki LOKALNIE + prawdy DALEKO
-(albo zera sygnału — klasa 1). Konwencje wyszukiwalne grepem mierz jako koszt, nie sukces.
+Design rule: discriminating on success requires a bad hint LOCALLY plus the truth FAR AWAY (or zero
+signal — class 1). Measure grep-findable conventions as cost, not success.
 
-## Cel kalibracyjny (weryfikowany empirycznie, N≥5)
+## Calibration target (verified empirically, N≥5)
 
-- klasa 1: A **0–30%**, B **>85%**
-- klasa 2: A **20–70%**, B **>85%**
-- klasa 3: A=B≈100%, Δkosztu < 0
-- poza widełkami → przeprojektowanie albo świadoma reklasyfikacja
+- class 1: A **0–30%**, B **>85%**
+- class 2: A **20–70%**, B **>85%**
+- class 3: A=B≈100%, Δcost < 0
+- outside the band → redesign or a deliberate reclassification
 
-## Podklasa: library-convention (2c) — od 2026-07-18
+## Subclass: library-convention (2c) — since 2026-07-18
 
-Konwencja zespołowa UŻYCIA popularnej biblioteki (nie znajomość API — tę model ma z treningu).
-Pułapka = sąsiedni plik pokazuje wzorzec poprawny dla INNEGO przypadku (rxjs: switchMap
-w search.js vs exhaustMap dla submitów; express: inline res.status w legacy users.js vs
-next(err) do centralnego middleware). Zadania: js-rxjs-submit-009, js-express-errors-010.
+A team convention for USING a popular library (not API knowledge — the model has that from training).
+The trap = a neighbouring file shows the pattern that is correct for a DIFFERENT case (rxjs: switchMap
+in search.js vs exhaustMap for submits; express: inline res.status in legacy users.js vs next(err) to
+central middleware). Tasks: js-rxjs-submit-009, js-express-errors-010.
 
-**Kalibracja 2026-07-18 (N=5, sonnet)**:
-- js-rxjs-submit-009: **A 0/5 vs B 5/5 (p=0.008), koszt B −2.5%** — pełny dyskryminator
-  na MAŁYM fixture (bez skali!). Konwencja operatorowa rxjs nie jest wywnioskowalna
-  z sąsiedztwa — sąsiad switchMap skutecznie myli. Najlepszy stosunek siły do rozmiaru.
-- js-express-errors-010: A 5/5 = nie dyskryminuje sukcesu (sygnał centralnego middleware
-  w app.js za mocny w małym repo — ta sama lekcja co brown-errors small). Koszt −7.9%.
-  Klasyfikacja: cost-only; kandydat na wersję XL (szum + zakopanie error-handlera).
+**Calibration 2026-07-18 (N=5, sonnet)**:
+- js-rxjs-submit-009: **A 0/5 vs B 5/5 (p=0.008), cost of B −2.5%** — a full discriminator on a SMALL
+  fixture (no scale needed!). The rxjs operator convention is not inferable from the neighbourhood —
+  the neighbouring switchMap misleads effectively. The best strength-to-size ratio.
+- js-express-errors-010: A 5/5 = does not discriminate success (the central-middleware signal in
+  app.js is too strong in a small repo — the same lesson as brown-errors small). Cost −7.9%.
+  Classification: cost-only; a candidate for an XL version (noise + a buried error handler).
 
-**Rozbudowa packa 2026-07-18, SKALIBROWANA (N=5, sonnet)** — wynik negatywny, lekcja kluczowa:
+**Pack expansion 2026-07-18, CALIBRATED (N=5, sonnet)** — a negative result, and the key lesson:
 
-- js-rxjs-catch-011 (catchError wewnątrz flatteningu): A 5/5 = cost-only, koszt −18.7%
-- js-rxjs-latest-012 (withLatestFrom vs combineLatest): A 5/5, koszt ±0 — MARTWE (do wymiany)
-- js-rxjs-share-013 (shareReplay vs share): A 5/5 = cost-only, koszt −8.9%
-- js-express-errors-xl-014 (010 w skali, 134 pliki, errorHandler za setup/pipeline.js):
-  A 5/5 = cost-only, koszt −28.6%, tury 16→9. Hipoteza "sygnał middleware słabnie ze
-  skalą" OBALONA — spójne z lekcją 2b (konwencja grep-findable = cost-at-scale).
+- js-rxjs-catch-011 (catchError inside the flattening): A 5/5 = cost-only, cost −18.7%
+- js-rxjs-latest-012 (withLatestFrom vs combineLatest): A 5/5, cost ±0 — DEAD (retired)
+- js-rxjs-share-013 (shareReplay vs share): A 5/5 = cost-only, cost −8.9%
+- js-express-errors-xl-014 (010 at scale, 134 files, errorHandler behind setup/pipeline.js):
+  A 5/5 = cost-only, cost −28.6%, turns 16→9. The hypothesis "the middleware signal weakens with
+  scale" is REFUTED — consistent with lesson 2b (grep-findable convention = cost-at-scale).
 
-**Reguła projektowa (z tej kalibracji): dyskryminuje tylko polityka SPRZECZNA z priorem
-treningowym.** catchError-wewnątrz, withLatestFrom-dla-triggerów, shareReplay-dla-cache to
-KANONICZNE odpowiedzi (NgRx lore, blogi) — model zna je bez configu, mylący sąsiad nie
-przebija prioru. js-rxjs-submit-009 flipuje, bo wybór exhaustMap jest KONTESTOWANY
-(switchMap/mergeMap/concatMap wszystkie obronne; polityka zespołu = arbitralna decyzja).
-Test przy projektowaniu: "czy senior bez kontekstu firmy odpowiedziałby jednoznacznie?"
-TAK → zadanie będzie cost-only. Wartość configu = ROZBIEŻNOŚĆ polityki zespołu z kanonem,
-nie sama obecność konwencji. (To też narracja produktowa: agent zna best practices;
-płacisz za pomiar tego, gdzie twój zespół od nich odchodzi.)
+**Design rule (from this calibration): only a policy that CONTRADICTS the training prior
+discriminates.** catchError-inside, withLatestFrom-for-triggers, shareReplay-for-cache are CANONICAL
+answers (NgRx lore, blog posts) — the model knows them without a config, and a misleading neighbour
+does not beat the prior. js-rxjs-submit-009 flips because choosing exhaustMap is CONTESTED
+(switchMap/mergeMap/concatMap are all defensible; the team policy is an arbitrary decision).
+Design-time test: "would a senior engineer with no company context answer unambiguously?"
+YES → the task will be cost-only. The value of a config = the DIVERGENCE of the team's policy from the
+canon, not the presence of a convention as such. (This is also the product narrative: the agent knows
+best practices; you pay to measure where your team departs from them.)
 
-Wszystkie 4: oracle + sanity anty-wzorca (anty-wzorzec przechodzi widoczne, failuje hidden)
-zweryfikowane przed kalibracją. Dane: results/bench-20260718-101708.tsv.
+All 4: oracle + anti-pattern sanity (the anti-pattern passes the visible tests, fails the hidden ones)
+verified before calibration. Data: results/bench-20260718-101708.tsv.
 
-**Test kontrolny reguły — js-rxjs-refresh-015 (2026-07-18, N=5, sonnet)**: polityka
-exhaustMap dla refresh-buttona (kanon dla read = switchMap; sąsiad typeahead.js wzmacnia
-złą odpowiedź). Predykcja reguły: A powinno failować. **Wynik: A 60% (3/5) vs B 100%
-(5/5), Δ+40pp, koszt −14.4%** — pierwsze zadanie rxjs W WIDEŁKACH klasy 2 (A 20–70%);
-009 to klasa "pełny flip" (A 0%). Reguła potwierdzona kierunkowo (p=0.444, N=5 —
-wymaga N=10 w finalnej macierzy). Pre-filtr przy projektowaniu zadań library-convention:
-budować TYLKO konwencje kontestowane; kanoniczne mierzyć co najwyżej jako koszt.
+**Control test for the rule — js-rxjs-refresh-015 (2026-07-18, N=5, sonnet)**: an exhaustMap policy for
+a refresh button (canon for a read is switchMap; the neighbouring typeahead.js reinforces the wrong
+answer). Rule prediction: A should fail. **Result: A 60% (3/5) vs B 100% (5/5), Δ+40pp, cost −14.4%** —
+the first rxjs task INSIDE the class-2 band (A 20–70%); 009 is the "full flip" class (A 0%). The rule
+is directionally confirmed (p=0.444 at N=5 — needs N=10 in the final matrix). Design-time pre-filter
+for library-convention tasks: build ONLY contested conventions; measure canonical ones as cost at most.
 
-**Odrzucone: takeUntil/teardown** (z roadmapy). Konwencja teardown NIE jest behawioralnie
-dyskryminowalna: `subscription.unsubscribe()` w destroy() jest obserwacyjnie równoważne
-`takeUntil(destroy$)` — ukryty test nie odróżni formy bez grepowania źródła, a check na formę
-łamie zasadę determinizmu behawioralnego (rubryka pkt 4–5). Kandydat tylko jeśli kiedyś
-powstanie klasa "form-lint" mierzona osobno od sukcesu.
+**Rejected: takeUntil/teardown** (from the roadmap). The teardown convention is NOT behaviourally
+discriminable: `subscription.unsubscribe()` in destroy() is observationally equivalent to
+`takeUntil(destroy$)` — a hidden test cannot tell the forms apart without grepping the source, and
+checking for form breaks the behavioural-determinism rule (rubric items 4–5). A candidate only if a
+"form-lint" class measured separately from success ever exists.
 
-Technika: biblioteka WENDOROWANA — `node_modules/` commitowane do fixture (rxjs przycięty
-do dist/, ~4.5MB; express tree ~3.9MB), zero npm install w runie (zasada twarda 3 zachowana).
-`.gitignore` ma wyjątek `!cf-bench/fixtures/*/node_modules/`.
-Poza zasięgiem do decyzji o cache node_modules (ROADMAP): Angular/Karma/Jasmine/Jest/React —
-pełny toolchain, nie da się sensownie wendorować.
+Technique: the library is VENDORED — `node_modules/` committed into the fixture (rxjs trimmed to
+dist/, ~4.5MB; express tree ~3.9MB), zero npm install during a run (hard rule 3 preserved).
+`.gitignore` carries the exception `!cf-bench/fixtures/*/node_modules/`.
+Out of scope until the node_modules cache decision (ROADMAP): Angular/Karma/Jasmine/Jest/React —
+full toolchains, not sensibly vendorable.
 
-## Wariant C (placebo) — obrona przed "sami napisaliście configi"
+## Variant C (placebo) — defence against "you wrote the configs yourselves"
 
-Dla zadań flagowych dodaj `VARIANTS="A B C"` + `CONFIG_C="generic"` (configs/generic/ —
-best practices bez wiedzy o zadaniu). C≈A = efekt B pochodzi z wiedzy; C>A = część efektu
-to sama obecność configu (raportować uczciwie). Włączone: js-stack-discounts-002.
+For flagship tasks add `VARIANTS="A B C"` + `CONFIG_C="generic"` (configs/generic/ — best practices
+with no task knowledge). C≈A = the B effect comes from knowledge; C>A = part of the effect is the mere
+presence of a config (report that honestly). Enabled on: js-stack-discounts-002.
 
-## Anty-wzorce
+## Anti-patterns
 
-- Spec w całości w widocznych testach (agent czyta testy → zero dyskryminacji)
-- Wiedza gap-owa zapisana w komentarzu kodu fixture'a (to nie gap, to repo)
-- Ukryty test sprzeczny z widocznym (agent nie może przejść obu — nieuczciwe)
-- Zadanie flaky (rerun bez zmian daje inny wynik)
+- The spec fully contained in the visible tests (the agent reads the tests → zero discrimination)
+- The gap knowledge written into a code comment in the fixture (that is not a gap, that is the repo)
+- A hidden test that contradicts a visible one (the agent cannot pass both — unfair)
+- A flaky task (a rerun with no changes gives a different result)
 
-## Szablon nagłówka `.task`
+## `.task` header template
 
 ```
-# GAP: <cytat linii configu, która rozstrzyga>
-# HYPOTHESIS: A fails because <przewidywany błędny wybór agenta>
+# GAP: <quote the config line that decides it>
+# HYPOTHESIS: A fails because <the wrong choice the agent is predicted to make>
 ```

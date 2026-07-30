@@ -1,0 +1,15 @@
+# CLASS: conflicting-signal (library convention, 2c) — contested-prior pre-filter applied:
+#        for an upload queue "parallelize with mergeMap" and "serialize with concatMap" are
+#        both defensible senior answers; neighbor thumbnails.js reinforces mergeMap. Policy:
+#        strictly serial (backend rejects concurrent multipart sessions).
+# GAP: "uploads are strictly SERIAL — concatMap ... never parallel (mergeMap), never cancels (switchMap), never dropped (exhaustMap)" (configs/js-rxjs-upload-b/CLAUDE.md)
+# HYPOTHESIS: A picks mergeMap (parallel-uploads prior + neighbor pattern) — the mid-upload
+#             file starts immediately and fails the hidden serial-queue test
+TASK_ID="js-rxjs-upload-016"
+PROMPT="Implement uploadQueue(files\$, uploadFn) in src/uploads.js: files\$ emits file descriptors as the user adds them, uploadFn(file) returns an Observable of the upload receipt; the returned Observable emits the receipts. Follow the project's RxJS conventions. Make npm test pass; do not modify the tests."
+FIXTURE="js-rxjs-upload"
+CONFIG="js-rxjs-upload-b"
+HIDDEN="js-rxjs-upload-hidden"
+MAX_TURNS="12"
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
+CHECK="check.sh"

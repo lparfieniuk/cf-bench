@@ -10,6 +10,14 @@ PROMPT="Implement createRefundHandler in src/routes/refunds.js: POST body has or
 FIXTURE="js-express-errors-xl"
 CONFIG="js-express-errors-b"
 HIDDEN="js-express-errors-hidden"
+# C = generic placebo; D = ContextForge always-on core (configs/cf-core) — the SAME config run on
+# the small twin (010), so this is a clean scale comparison of one config, not two configs.
+# On 010 (9 files) D was +6.9% cost vs A (p=0.016): the ~940-token rule tax outweighed the gain.
+# Here (142 files, 120 noise) discovery discipline has room to pay — B already shows -28.6% at
+# this scale vs -3.2% on the small twin. Tests: is CF's value scale-dependent?
+VARIANTS="A B C D"
+CONFIG_C="generic"
+CONFIG_D="cf-core"
 MAX_TURNS="20"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
 CHECK="check.sh"

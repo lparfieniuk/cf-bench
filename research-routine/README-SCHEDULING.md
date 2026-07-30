@@ -1,19 +1,23 @@
-# Harmonogram skanu (launchd, macOS)
+# Scan scheduling (launchd, macOS)
 
-Rutyna działa lokalnie (wymaga ai-knowledge na :3711 i zalogowanego `claude` CLI) — dlatego launchd, nie cloud.
+The routine runs locally (it needs ai-knowledge on :3711 and a logged-in `claude` CLI) — hence
+launchd rather than cloud.
 
-## Instalacja (raz)
+## Install (once)
+
+Run this from anywhere; `REPO` is the only thing to adjust if you cloned elsewhere.
 
 ```bash
-chmod +x ~/Projects/ai-tools/research-routine/run-research-scan.sh
-cat > ~/Library/LaunchAgents/cc.lphouse.cfbench-research-scan.plist <<'EOF'
+REPO="$HOME/Projects/ai-tools"
+chmod +x "$REPO/research-routine/run-research-scan.sh"
+cat > ~/Library/LaunchAgents/cfbench-research-scan.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>Label</key><string>cc.lphouse.cfbench-research-scan</string>
+  <key>Label</key><string>cfbench-research-scan</string>
   <key>ProgramArguments</key><array>
     <string>/bin/bash</string>
-    <string>/Users/lparfie/Projects/ai-tools/research-routine/run-research-scan.sh</string>
+    <string>$REPO/research-routine/run-research-scan.sh</string>
   </array>
   <key>StartCalendarInterval</key><dict>
     <key>Weekday</key><integer>1</integer>
@@ -23,24 +27,27 @@ cat > ~/Library/LaunchAgents/cc.lphouse.cfbench-research-scan.plist <<'EOF'
   <key>StandardErrorPath</key><string>/tmp/cfbench-research-scan.err</string>
 </dict></plist>
 EOF
-launchctl load ~/Library/LaunchAgents/cc.lphouse.cfbench-research-scan.plist
+launchctl load ~/Library/LaunchAgents/cfbench-research-scan.plist
 ```
 
-## Test ręczny
+Note the unquoted heredoc: `$REPO` is expanded when the plist is written, because launchd does not
+expand `~` or environment variables inside `ProgramArguments`.
+
+## Manual test
 
 ```bash
-bash ~/Projects/ai-tools/research-routine/run-research-scan.sh
-# raport: ~/Projects/ai-tools/research-reports/scan-YYYY-MM-DD.md
+bash research-routine/run-research-scan.sh
+# report: research-reports/scan-YYYY-MM-DD.md
 ```
 
-## Deinstalacja
+## Uninstall
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/cc.lphouse.cfbench-research-scan.plist
-rm ~/Library/LaunchAgents/cc.lphouse.cfbench-research-scan.plist
+launchctl unload ~/Library/LaunchAgents/cfbench-research-scan.plist
+rm ~/Library/LaunchAgents/cfbench-research-scan.plist
 ```
 
-Uwaga: laptop musi być włączony w poniedziałek 08:57; launchd NIE nadrabia pominiętych uruchomień
-(StartCalendarInterval odpala pominięty job po wybudzeniu tylko gdy Mac spał, nie gdy był wyłączony).
-Docelowo rutyna przechodzi do context-forge jako skill `/research-scan` — patrz
-`~/Projects/ai-tools/context-forge-suggestions/001-research-scan-skill.md`.
+Caveat: the laptop has to be awake on Monday at 08:57; launchd does NOT make up missed runs
+(`StartCalendarInterval` fires a missed job after wake only if the Mac was asleep, not if it was off).
+Eventually the routine moves into context-forge as a `/research-scan` skill — see
+`context-forge-suggestions/001-research-scan-skill.md`.

@@ -8,6 +8,13 @@ PROMPT="Implement createRefundHandler in src/routes/refunds.js: POST body has or
 FIXTURE="js-express-errors"
 CONFIG="js-express-errors-b"
 HIDDEN="js-express-errors-hidden"
+# Cost-only task (A and B both pass): the clean vehicle for "do CF's rules cut cost".
+# C = generic placebo (any CLAUDE.md present); D = ContextForge always-on core (configs/cf-core),
+# both with ZERO task knowledge. Honest read: D vs C isolates CF's efficiency rules from mere
+# config presence. Expected D≈C≈A on success, D<C on cost/turns iff the rules pay for themselves.
+VARIANTS="A B C D"
+CONFIG_C="generic"
+CONFIG_D="cf-core"
 MAX_TURNS="12"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
 CHECK="check.sh"

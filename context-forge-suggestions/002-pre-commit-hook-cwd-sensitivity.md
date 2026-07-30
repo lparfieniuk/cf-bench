@@ -1,46 +1,46 @@
-# Sugestia CF-002: pre-commit-review marker wrażliwy na cwd sesji
+# Suggestion CF-002: the pre-commit-review marker is sensitive to the session cwd
 
-Status: PROPOZYCJA — bug znaleziony w praktyce 2026-07-16 podczas pracy nad cf-bench.
+Status: PROPOSAL — a bug found in practice on 2026-07-16 while working on cf-bench.
 
 ## Problem
 
-`hooks/pre-commit-review.sh` liczy `SESSION_HASH` z cwd **sesji w momencie PreToolUse** —
-a nie z katalogu repo, którego dotyczy commit. Skutki zaobserwowane:
+`hooks/pre-commit-review.sh` computes `SESSION_HASH` from the **session cwd at PreToolUse time** —
+not from the repo directory the commit belongs to. Observed consequences:
 
-1. Komenda `cd ~/repo && git commit ...` jest blokowana, jeśli poprzednia komenda zostawiła
-   cwd sesji w podkatalogu (`~/repo/cf-bench`) — hook hashuje podkatalog, marker istnieje
-   tylko dla korzenia. `cd` wewnątrz komendy nie pomaga: hook odpala się PRZED wykonaniem.
-2. Review wykonany → commit i tak zablokowany → użytkownik/agent uczony jest sięgać po
-   `SKIP_REVIEW=1` — hook antywzorcem trenuje własne obejście.
+1. The command `cd ~/repo && git commit ...` is blocked if a previous command left the session cwd in
+   a subdirectory (`~/repo/cf-bench`) — the hook hashes the subdirectory, while the marker only exists
+   for the root. A `cd` inside the command does not help: the hook fires BEFORE execution.
+2. Review done → commit blocked anyway → the user/agent is taught to reach for `SKIP_REVIEW=1` —
+   the hook trains its own bypass as an anti-pattern.
 
-## Proponowana naprawa
+## Proposed fix
 
-W hooku, zamiast hashować surowe `HOOK_CWD`, znormalizować do korzenia repo:
+In the hook, instead of hashing the raw `HOOK_CWD`, normalize to the repo root:
 
 ```bash
 REPO_ROOT=$(git -C "$HOOK_CWD" rev-parse --show-toplevel 2>/dev/null || echo "$HOOK_CWD")
 SESSION_HASH=$(printf "%s" "${REPO_ROOT}:$(whoami)" | pwd_hash | cut -c1-8)
 ```
 
-Analogicznie w skillu `pre-review` (instrukcja tworzenia markera) — dziś skill każe hashować
-`$PWD`, co ma tę samą wadę. Dodatkowo: skill i hook mają rozjazd `printf` vs `echo` — nieszkodliwy
-tylko dlatego, że `pwd_hash` robi `tr -d '\n'`; ujednolicić na `printf` dla jasności.
+Same for the `pre-review` skill (which documents how to create the marker) — today the skill says to
+hash `$PWD`, which has the same flaw. Additionally: the skill and the hook disagree on `printf` vs
+`echo` — harmless only because `pwd_hash` does `tr -d '\n'`; unify on `printf` for clarity.
 
-## Drugi przypadek z praktyki (2026-07-16, ta sama sesja)
+## A second case from practice (2026-07-16, same session)
 
-Sesyjny cwd wskazywał **skasowany katalog mktemp** (poprzednia komenda robiła `cd "$W" && ... &&
-rm -rf "$W"`) — hook hashował ścieżkę-widmo i blokował commit mimo świeżego review. Normalizacja
-do `git rev-parse --show-toplevel` rozwiązuje też ten wariant (fallback gdy git zawiedzie:
-blokuj z komunikatem "nieznany cwd", nie z mylącym "brak review").
+The session cwd pointed at a **deleted mktemp directory** (a previous command did `cd "$W" && ... &&
+rm -rf "$W"`) — the hook hashed a ghost path and blocked the commit despite a fresh review.
+Normalizing to `git rev-parse --show-toplevel` also fixes this variant (fallback when git fails:
+block with an "unknown cwd" message, not with a misleading "no review").
 
-## Test akceptacyjny
+## Acceptance test
 
-1. `/pre-review` w korzeniu repo → marker.
-2. `cd podkatalog` (osobna komenda) → `cd korzeń && git commit` → MUSI przejść.
-3. Commit w repo bez markera → nadal blokowany.
+1. `/pre-review` at the repo root → marker created.
+2. `cd subdirectory` (as a separate command) → `cd root && git commit` → MUST pass.
+3. A commit in a repo with no marker → still blocked.
 
-## Bonus (odkryte przy okazji)
+## Bonus (found along the way)
 
-Marker nie jest konsumowany po commicie — jeden review "odblokowuje" wszystkie kolejne commity
-sesji na zawsze. Rozważyć: `mtime` markera < N minut albo kasowanie markera w PostToolUse po
-udanym commicie (świadomy trade-off między frykcją a rygorem).
+The marker is not consumed after a commit — one review "unlocks" every subsequent commit in the
+session, forever. Consider: marker `mtime` < N minutes, or deleting the marker in PostToolUse after a
+successful commit (a deliberate trade-off between friction and rigor).

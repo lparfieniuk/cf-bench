@@ -1,50 +1,51 @@
 # cf-bench Weekly Research Scan (program.md)
 
-Jesteś agentem researchowym projektu cf-bench (benchmark configów agentów kodujących).
-Wykonaj JEDEN przebieg skanu i zakończ. Budżet: maks. 15 wyszukiwań web, ~10 min pracy.
+You are the research agent for cf-bench (a benchmark for coding-agent configs).
+Perform ONE scan pass and stop. Budget: at most 15 web searches, ~10 minutes of work.
 
-## Cel
+## Goal
 
-Wykryć zmiany w krajobrazie ewaluacji/benchmarków agentów AI, które wpływają na cf-bench,
-zapisać nowości do lokalnej bazy ai-knowledge i zostawić krótki raport.
+Detect changes in the AI-agent evaluation/benchmark landscape that affect cf-bench, record what is new
+in the local ai-knowledge database, and leave a short report.
 
-## Krok 1 — Skan źródeł (WebSearch/WebFetch)
+## Step 1 — Scan the sources (WebSearch/WebFetch)
 
-Przeszukaj pod kątem NOWOŚCI z ostatnich 7 dni:
-1. Anthropic engineering blog + changelog Claude Code (nowe funkcje benchmarku/evali, zmiany Skill Creator)
-2. Konkurencja bezpośrednia: AgentBench.app, claude-skills-benchmark, Skill Creator plugin, **SkillsBench (arXiv 2602.12670 — obserwuj rozszerzenie z "skills jako klasa" na per-repo configi)**, nowe "benchmark your agent config" narzędzia
-3. Sąsiedzi: Headroom, promptfoo, Braintrust, Langfuse, Vals AI, LMArena — zmiany produktowe/cenowe/funding
-4. Badania: arXiv — skuteczność plików kontekstu (AGENTS.md/CLAUDE.md), ewaluacja agentów kodujących, harness design
-5. HN/Reddit: dyskusje o regresjach jakości agentów po updatach modeli (paliwo dla regression-watch)
+Search for what is NEW in the last 7 days:
+1. The Anthropic engineering blog + the Claude Code changelog (new benchmark/eval features, Skill Creator changes)
+2. Direct competition: AgentBench.app, claude-skills-benchmark, the Skill Creator plugin, **SkillsBench (arXiv 2602.12670 — watch for an expansion from "skills as a class" to per-repo configs)**, any new "benchmark your agent config" tooling
+3. Neighbours: Headroom, promptfoo, Braintrust, Langfuse, Vals AI, LMArena — product/pricing/funding changes
+4. Research: arXiv — the effectiveness of context files (AGENTS.md/CLAUDE.md), coding-agent evaluation, harness design
+5. HN/Reddit: discussions of agent quality regressions after model updates (fuel for regression-watch)
 
-## Krok 2 — Deduplikacja przeciw bazie
+## Step 2 — Deduplicate against the database
 
-Dla każdego znaleziska wywołaj `mcp__knowledge__search_knowledge` (fraza kluczowa).
-Jeśli wpis istnieje i nic się nie zmieniło — pomiń. Baza: localhost:3711.
+For every finding call `mcp__knowledge__search_knowledge` (with the key phrase).
+If an entry exists and nothing has changed — skip it. Database: localhost:3711.
 
-## Krok 3 — Zapis nowości
+## Step 3 — Record what is new
 
-Nowe/zmienione znaleziska: dopisz do bazy ai-knowledge przez dostępne narzędzie MCP
-(jeśli baza jest read-only przez MCP — zapisz do pliku raportu z sekcją `## Do dodania do ai-knowledge`).
-Tagi: `cf-bench` + odpowiednie (`ai-tools`, `market-data`, `business`).
+New or changed findings: append them to the ai-knowledge database via the available MCP tool
+(if the database is read-only over MCP — write them into the report under a
+`## To add to ai-knowledge` section).
+Tags: `cf-bench` plus whatever applies (`ai-tools`, `market-data`, `business`).
 
-## Krok 4 — Raport tygodniowy
+## Step 4 — Weekly report
 
-Zapisz `~/Projects/ai-tools/research-reports/scan-YYYY-MM-DD.md`:
-- **TL;DR** (3 zdania max): czy coś zagraża naszej niszy / otwiera okazję
-- **Zagrożenia**: ruchy platformy (Anthropic/Cursor/Nx) wchodzące w pomiar configów
-- **Okazje**: nowe bóle (regresje po updatach), nowe badania do zacytowania
-- **Akcje sugerowane** (maks. 3, z priorytetem)
-- Źródła jako linki
+Write `research-reports/scan-YYYY-MM-DD.md` inside the repo:
+- **TL;DR** (3 sentences max): does anything threaten our niche or open an opportunity
+- **Threats**: platform moves (Anthropic/Cursor/Nx) entering config measurement
+- **Opportunities**: new pain points (regressions after updates), new research to cite
+- **Suggested actions** (at most 3, prioritized)
+- Sources as links
 
-## Krok 5 — Sygnał krytyczny
+## Step 5 — Critical signal
 
-Jeżeli znajdziesz zagrożenie egzystencjalne (np. Anthropic rozszerza Skill Creator na całe configi,
-ktoś wypuszcza dokładnie cf-bench z trakcją) — dodaj na początku raportu linię:
-`⚠️ ALERT: <jedno zdanie>`.
+If you find an existential threat (e.g. Anthropic expands Skill Creator to whole configs, or someone
+ships exactly cf-bench with traction) — add this line at the very top of the report:
+`⚠️ ALERT: <one sentence>`.
 
-## Ograniczenia
+## Constraints
 
-- NIGDY nie modyfikuj plików poza `research-reports/` i bazą ai-knowledge.
-- Nie powtarzaj treści istniejących raportów — tylko delta tygodnia.
-- Wątpliwe twierdzenia oznaczaj `[niezweryfikowane]`. Każde twierdzenie z linkiem źródłowym.
+- NEVER modify files outside `research-reports/` and the ai-knowledge database.
+- Do not repeat the contents of existing reports — only this week's delta.
+- Mark doubtful claims `[unverified]`. Every claim carries a source link.
