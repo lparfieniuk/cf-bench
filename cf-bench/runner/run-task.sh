@@ -12,6 +12,14 @@ CLAUDE_BIN="${CFBENCH_CLAUDE_BIN:-claude}"   # override with a mock in tests
 HIDDEN=""
 source "$TASK_FILE"
 
+# Deps are installed once by runner/setup-fixtures.sh — a run must never touch the
+# network. Without this guard a missing node_modules costs a paid run and surfaces
+# as a mystery test failure instead of a setup error.
+if [ -f "$BENCH_ROOT/fixtures/$FIXTURE/package-lock.json" ] && [ ! -d "$BENCH_ROOT/fixtures/$FIXTURE/node_modules" ]; then
+  echo "FATAL: fixture '$FIXTURE' has no node_modules — run runner/setup-fixtures.sh first" >&2
+  exit 2
+fi
+
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/cfbench.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 cp -R "$BENCH_ROOT/fixtures/$FIXTURE/." "$WORK/"

@@ -13,8 +13,9 @@ A task is good when **the config decides success**, not just cost. ts-mini-001 d
    task *attemptable*; hidden ones pin down the spec (design decisions, conventions, invariants).
 3. **Sanity gate**: the check MUST fail before the run (enforced by the runner; the gate only sees
    the visible tests — hidden ones are injected after the agent run).
-4. **Determinism**: no network, no dependence on TZ/clock/locale, no npm install. Success = exit code,
-   never an LLM judge.
+4. **Determinism**: no network during a run, no dependence on TZ/clock/locale. Dependencies are pinned
+   to exact versions in the fixture's `package.json` and installed once up front by
+   `runner/setup-fixtures.sh`. Success = exit code, never an LLM judge.
 5. **Difficulty from knowledge, not from puzzle**: the fix itself is trivial; what is hard is
    WHAT/WHERE according to project policy. We are not testing model intelligence, we are testing the
    value of the config.
@@ -125,11 +126,14 @@ discriminable: `subscription.unsubscribe()` in destroy() is observationally equi
 checking for form breaks the behavioural-determinism rule (rubric items 4–5). A candidate only if a
 "form-lint" class measured separately from success ever exists.
 
-Technique: the library is VENDORED — `node_modules/` committed into the fixture (rxjs trimmed to
-dist/, ~4.5MB; express tree ~3.9MB), zero npm install during a run (hard rule 3 preserved).
-`.gitignore` carries the exception `!cf-bench/fixtures/*/node_modules/`.
+Technique: the library is pinned to an exact version in the fixture's `package.json`
+(`express` 4.22.2, `rxjs` 7.8.2) with a committed `package-lock.json`, and installed once by
+`runner/setup-fixtures.sh` before the matrix. Runs stay offline and deterministic (hard rule 3
+preserved); `node_modules/` is gitignored. Until 2026-07-30 these trees were hand-vendored into git
+instead — the switch is why result files older than that date were measured against a `package.json`
+declaring no dependencies.
 Out of scope until the node_modules cache decision (ROADMAP): Angular/Karma/Jasmine/Jest/React —
-full toolchains, not sensibly vendorable.
+full toolchains, far heavier to install per fixture.
 
 ## Variant C (placebo) — defence against "you wrote the configs yourselves"
 

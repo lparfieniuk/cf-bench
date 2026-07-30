@@ -71,6 +71,10 @@ The design decisions that make the numbers mean something:
   between runs and the comparison is worthless.
 - **Fresh workdir per run.** Every run gets its own `mktemp -d` with a clean fixture copy. Zero state
   leakage between repeats.
+- **Runs never touch the network.** Fixture dependencies are pinned to exact versions and installed
+  once by `setup-fixtures.sh` (`npm ci` from a committed lockfile); the populated `node_modules` is
+  then copied into each workdir. A run that finds no `node_modules` is rejected before it costs
+  anything, rather than failing later for the wrong reason.
 - **Sanity gate.** The fixture's `check.sh` MUST fail before the agent starts. A task that already
   passes measures nothing, and the runner refuses to run it.
 - **Hidden assertions.** Visible tests make a task *attemptable* but deliberately underspecify it.
@@ -93,10 +97,12 @@ public internet.
 
 ## Quickstart
 
-Requirements: bash, python3 (stdlib only), node ≥ 20, and the `claude` CLI logged in. No `npm install`
-anywhere — fixture dependencies are vendored.
+Requirements: bash, python3 (stdlib only), node ≥ 20, and the `claude` CLI logged in.
 
 ```bash
+# once, before anything else: install fixture dependencies (npm ci from committed lockfiles)
+cf-bench/runner/setup-fixtures.sh
+
 # no LLM cost: mocked agent + oracle validation of every task
 bash cf-bench/test/smoke.sh
 
@@ -146,9 +152,9 @@ the set after N≥5 calibration lands inside its class band; otherwise it is red
 
 | Path | What |
 |---|---|
-| `cf-bench/runner/` | the whole harness: 4 bash scripts, ~250 lines |
+| `cf-bench/runner/` | the whole harness: 5 bash scripts, ~280 lines |
 | `cf-bench/tasks/` | task definitions (`retired/` holds ones measurement killed) |
-| `cf-bench/fixtures/` | synthetic repos, dependencies vendored |
+| `cf-bench/fixtures/` | synthetic repos; deps pinned in the lockfile, installed by `setup-fixtures.sh` |
 | `cf-bench/fixtures-hidden/` | assertions injected after the agent run |
 | `cf-bench/configs/` | the CLAUDE.md files under test, plus `generic/` (placebo) and `cf-core/` |
 | `cf-bench/oracles/` | reference solutions, kept outside `fixtures/` so agents never see them |
@@ -170,12 +176,18 @@ the set after N≥5 calibration lands inside its class band; otherwise it is red
   travel between releases.
 - **Synthetic fixtures are not your codebase.** They are contamination-proof and deterministic, which
   real repos are not. That trade is deliberate, and it is a trade.
+- **The recorded results predate a fixture change.** Every TSV here was produced when the eight
+  library fixtures carried a hand-vendored `node_modules` and a `package.json` that declared no
+  dependencies. Those dependencies are now declared and lockfile-pinned, so the agent sees a
+  `package.json` and a `package-lock.json` it did not see before. Both arms shift equally and every
+  task still passes the oracle gate, but strict cell-by-cell comparability with the next matrix is not
+  claimed until it is re-measured.
 - **OAuth auth forces a user-level configuration in the background** (`--bare` needs an API key). Runs
   also share session limits with interactive work; a mid-matrix 429 trips the circuit breaker, and
   those rows are recorded as `api_error` and excluded from aggregates rather than counted as failures.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Fixture dependencies under `cf-bench/fixtures/*/node_modules/` are
-vendored third-party packages (MIT / Apache-2.0 / 0BSD / BSD), each retaining its own license file;
-the MIT grant here covers only the code in this repository.
+MIT — see [LICENSE](LICENSE). Fixture dependencies (express, rxjs) are installed locally from the
+committed lockfiles, not distributed here, and remain under their own licenses; the MIT grant covers
+only the code in this repository.

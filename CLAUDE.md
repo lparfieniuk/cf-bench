@@ -9,7 +9,7 @@ Stage: Phase 0 (the measurement foundation).
 
 1. **Metrics-first**: no rule, feature, or claim lands without a measurement. Anything doubtful → `[unverified]`.
 2. **Credibility > code**: the moat is the methodology + the task set + the data history. The runner code is deliberately trivial.
-3. **No dependencies without approval**: runner = bash + python3 stdlib; fixtures = node:test with no npm install. Do not add frameworks.
+3. **No dependencies without approval**: runner = bash + python3 stdlib; fixtures = node:test. Fixture deps are pinned exactly and installed once by `runner/setup-fixtures.sh` — never inside a run (runs stay offline). Do not add frameworks.
 4. **Local-first, stateless, flat files** (TSV/YAML/md). No databases, no servers, no cloud — hosted only after the first paying customer.
 5. **Deterministic scoring**: success = the fixture's check.sh (exit 0). NEVER an LLM-as-judge in the scoring loop.
 6. **Benchmark rigor**: isolation via `--setting-sources project`, pinned `--model`, a fresh mktemp workdir, a sanity gate (the check must fail before the run), N repeats, medians reported. N<10 is directional, not proof.
@@ -22,6 +22,8 @@ Stage: Phase 0 (the measurement foundation).
   land in `research-reports/` (gitignored).
 - Benchmark results: `cf-bench/results/*.tsv` — never delete these, they are the future data moat.
 - After changing the runner: `bash cf-bench/test/smoke.sh` (mocked, zero cost) must PASS.
+- Fresh clone or a changed fixture lockfile: run `cf-bench/runner/setup-fixtures.sh` first, otherwise
+  the runner rejects every affected task.
 
 ## Traps already discovered (do not rediscover them)
 

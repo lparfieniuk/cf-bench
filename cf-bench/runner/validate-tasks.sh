@@ -21,6 +21,12 @@ for TASK_FILE in "$BENCH_ROOT"/tasks/*.task; do
     continue
   fi
 
+  if [ -f "$BENCH_ROOT/fixtures/$FIXTURE/package-lock.json" ] && [ ! -d "$BENCH_ROOT/fixtures/$FIXTURE/node_modules" ]; then
+    echo "$TASK_ID: FAIL — fixture '$FIXTURE' has no node_modules, run runner/setup-fixtures.sh first"
+    FAIL=1
+    continue
+  fi
+
   WORK="$(mktemp -d "${TMPDIR:-/tmp}/cfbench-oracle.XXXXXX")"
   cp -R "$BENCH_ROOT/fixtures/$FIXTURE/." "$WORK/"
 

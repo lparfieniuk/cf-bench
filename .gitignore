@@ -6,6 +6,3 @@ cf-bench/results/validation-*.tsv
 
 # not for the public repo: pre-publication audits, GTM / market / monetization research
 private/
-
-# vendored fixture deps (zero-npm-install rule): keep these committed
-!cf-bench/fixtures/*/node_modules/

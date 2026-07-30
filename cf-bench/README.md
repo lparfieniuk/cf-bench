@@ -24,6 +24,9 @@ the expected C≈A proves the B effect is the encoded knowledge, not the mere pr
 - **Pinned model**: `--model` always explicit (`CFBENCH_MODEL`, default `sonnet`) — without it the
   CLI can pick different models between runs.
 - **Fresh workdir**: every run in a `mktemp -d`, fixture copied in, cleaned up afterwards. Zero state leakage.
+- **Offline runs**: fixture dependencies are pinned to exact versions and installed once by
+  `runner/setup-fixtures.sh` (`npm ci` from a committed lockfile). A run that finds no `node_modules`
+  is rejected before it costs anything.
 - **Sanity gate**: before the run `check.sh` MUST fail (the fixture really is broken), otherwise the
   run is rejected.
 - **N repeats** (default 3): LLM variance is high; we report medians, not single runs.
@@ -46,6 +49,9 @@ the expected C≈A proves the B effect is the encoded knowledge, not the mere pr
 ## Usage
 
 ```bash
+# once, before anything else — install fixture dependencies:
+runner/setup-fixtures.sh
+
 # single run (debug):
 runner/run-task.sh tasks/ts-fix-discount-001.task B 1
 

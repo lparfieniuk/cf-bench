@@ -22,9 +22,8 @@ SOFTWARE.
 
 ---
 
-Third-party code: the directories cf-bench/fixtures/*/node_modules/ contain
-vendored third-party npm packages (express, rxjs and their transitive
-dependencies), committed deliberately so that benchmark runs require no network
-access or `npm install`. Those packages are distributed under their own terms
-(MIT, Apache-2.0, 0BSD and BSD variants) and each retains its own LICENSE file.
-The MIT grant above applies only to the code authored in this repository.
+Third-party code: benchmark fixtures depend on third-party npm packages (express,
+rxjs and their transitive dependencies), pinned in each fixture's
+package-lock.json and installed locally by cf-bench/runner/setup-fixtures.sh.
+Those packages are not distributed with this repository and remain subject to
+their own licenses. The MIT grant above applies only to the code authored here.
