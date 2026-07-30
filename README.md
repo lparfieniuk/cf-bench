@@ -1,5 +1,7 @@
 # cf-bench
 
+[![smoke](https://github.com/lparfieniuk/cf-bench/actions/workflows/smoke.yml/badge.svg)](https://github.com/lparfieniuk/cf-bench/actions/workflows/smoke.yml)
+
 **Does your agent config actually do anything?** Everyone ships CLAUDE.md files, cursor rules packs and
 skill bundles. Almost nobody measures whether they change outcomes. cf-bench is a small, deliberately
 boring harness that answers the question with numbers: same task, same repo, **variant A** (bare) vs
