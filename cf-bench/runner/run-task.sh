@@ -20,6 +20,45 @@ if [ -f "$BENCH_ROOT/fixtures/$FIXTURE/package-lock.json" ] && [ ! -d "$BENCH_RO
   exit 2
 fi
 
+# Provider per variant. A variant is normally a config directory; variant D is a
+# PROVIDER swap of B -- same fixture, same config, same check, same MAX_TURNS, so
+# the only thing that differs is which process serves the tokens and Δ(D−B) is the
+# provider effect and nothing else.
+#
+#   VARIANTS="A B D"
+#   PROVIDER_D="ollama:cfaios-qwen3-14b-32k"
+#
+# Routing is session-wide (there is no per-subagent provider), so the boundary is
+# this process: two env vars and --model. No proxy, no gateway.
+PROVIDER_VAR="PROVIDER_$VARIANT"
+PROVIDER="${!PROVIDER_VAR:-anthropic}"
+CLAUDE_ENV=(env)
+case "$PROVIDER" in
+  anthropic) ;;
+  ollama:?*)
+    OLLAMA_TAG="${PROVIDER#ollama:}"
+    OLLAMA_URL="${CFBENCH_OLLAMA_URL:-http://localhost:11434}"
+    # Preflight BEFORE the fixture is copied: a down server, a missing tag or an
+    # unpinned context window must cost an error, not a degraded run. Ollama
+    # defaults sit below the model maximum and the failure is silent.
+    if ! curl -sf -m 5 "$OLLAMA_URL/api/version" >/dev/null 2>&1; then
+      echo "FATAL: variant $VARIANT wants $PROVIDER but ollama is not reachable at $OLLAMA_URL" >&2
+      exit 2
+    fi
+    OLLAMA_CTX="$("${CFBENCH_OLLAMA_BIN:-ollama}" show "$OLLAMA_TAG" 2>/dev/null | awk '$1 == "num_ctx" { print $2 }' | head -1)"
+    if [ -z "$OLLAMA_CTX" ] || [ "$OLLAMA_CTX" -lt 32768 ]; then
+      echo "FATAL: ollama tag '$OLLAMA_TAG' has num_ctx '${OLLAMA_CTX:-unset}', below the 32768 floor for coding" >&2
+      exit 2
+    fi
+    MODEL="$OLLAMA_TAG"
+    CLAUDE_ENV=(env "ANTHROPIC_BASE_URL=$OLLAMA_URL" "ANTHROPIC_AUTH_TOKEN=ollama")
+    ;;
+  *)
+    echo "FATAL: $PROVIDER_VAR must be 'anthropic' or 'ollama:<tag>' (got '$PROVIDER')" >&2
+    exit 2
+    ;;
+esac
+
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/cfbench.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 cp -R "$BENCH_ROOT/fixtures/$FIXTURE/." "$WORK/"
@@ -36,16 +75,22 @@ if [ "$VARIANT" = "B" ]; then
   cp -R "$BENCH_ROOT/configs/$CONFIG/." "$WORK/"
 elif [ "$VARIANT" != "A" ]; then
   CONFIG_VAR="CONFIG_$VARIANT"
-  if [ -z "${!CONFIG_VAR:-}" ]; then
-    echo "FATAL: variant $VARIANT requested but $CONFIG_VAR not set in $TASK_FILE" >&2
+  # A provider-swap variant reuses B's config by default, so adding an Ollama arm
+  # is one line per task instead of a duplicated config directory.
+  VARIANT_CONFIG="${!CONFIG_VAR:-}"
+  if [ -z "$VARIANT_CONFIG" ] && [ "$PROVIDER" != "anthropic" ]; then
+    VARIANT_CONFIG="$CONFIG"
+  fi
+  if [ -z "$VARIANT_CONFIG" ]; then
+    echo "FATAL: variant $VARIANT requested but neither $CONFIG_VAR nor $PROVIDER_VAR set in $TASK_FILE" >&2
     exit 2
   fi
-  cp -R "$BENCH_ROOT/configs/${!CONFIG_VAR}/." "$WORK/"
+  cp -R "$BENCH_ROOT/configs/$VARIANT_CONFIG/." "$WORK/"
 fi
 
 RESULT_JSON="$WORK/.cfbench-result.json"
 set +e
-( cd "$WORK" && "$CLAUDE_BIN" -p "$PROMPT" \
+( cd "$WORK" && "${CLAUDE_ENV[@]}" "$CLAUDE_BIN" -p "$PROMPT" \
     --output-format json \
     --model "$MODEL" \
     --max-turns "$MAX_TURNS" \

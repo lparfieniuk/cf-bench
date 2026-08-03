@@ -6,3 +6,10 @@ CONFIG="ts-mini-b"
 MAX_TURNS="15"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
 CHECK="check.sh"
+# Variant D = provider swap of B: same fixture, same config, same check, same
+# MAX_TURNS, served by a local model instead of the API, so Δ(D−B) is the provider
+# effect alone. Read it with CFBENCH_BASELINE=B, and read succ/turns/duration
+# rather than cost — the local arm's cost_usd is synthetic (no real spend, and no
+# prompt caching on the Ollama path).
+VARIANTS="A B D"
+PROVIDER_D="ollama:cfaios-qwen3-14b-32k"

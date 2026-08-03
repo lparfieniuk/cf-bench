@@ -73,6 +73,67 @@ ROW5=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-multiplicative" \
   bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/js-stack-discounts-002.task" C 1)
 echo "$ROW5" | cut -f6 | grep -qx 0 || { echo "FAIL: variant C run broken"; FAIL=1; }
 
+# Variant D (provider swap): the two routing env vars must reach the child and the
+# ollama tag must be passed as --model. A static file server stands in for the
+# Ollama endpoint so this stays offline and deterministic; `ollama show` is faked
+# through CFBENCH_OLLAMA_BIN.
+mkdir -p "$MOCK_DIR/api"
+echo '{"version":"mock"}' > "$MOCK_DIR/api/version"
+PORT=59431
+python3 -m http.server "$PORT" --directory "$MOCK_DIR" >/dev/null 2>&1 &
+HTTP_PID=$!
+disown "$HTTP_PID" 2>/dev/null || true   # otherwise bash prints "Terminated" at exit
+trap 'kill "$HTTP_PID" 2>/dev/null; rm -rf "$MOCK_DIR"' EXIT
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  curl -sf -m 1 "http://localhost:$PORT/api/version" >/dev/null 2>&1 && break
+  sleep 0.2
+done
+
+cat > "$MOCK_DIR/ollama-mock" <<'EOF'
+#!/usr/bin/env bash
+[ "$1" = show ] || exit 1
+printf '  Parameters\n    num_ctx    32768\n'
+EOF
+chmod +x "$MOCK_DIR/ollama-mock"
+
+cat > "$MOCK_DIR/claude-envrec" <<'EOF'
+#!/usr/bin/env bash
+{ env | grep '^ANTHROPIC_' | sort; printf '%s\n' "$@"; } > "$CFBENCH_ENV_RECORD"
+sed -i '' -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js 2>/dev/null \
+  || sed -i -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js
+echo '{"type":"result","subtype":"success","num_turns":4,"duration_ms":99,"total_cost_usd":0.5,"terminal_reason":"completed","session_id":"mock-d","usage":{"input_tokens":42967,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":493}}'
+EOF
+chmod +x "$MOCK_DIR/claude-envrec"
+
+ROW6=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-envrec" \
+  CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
+  CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
+  CFBENCH_OLLAMA_URL="http://localhost:$PORT" \
+  PROVIDER_D="ollama:mock-tag-32k" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" D 1)
+echo "$ROW6" | cut -f6 | grep -qx 1 || { echo "FAIL: variant D run broken"; FAIL=1; }
+echo "$ROW6" | cut -f5 | grep -qx mock-tag-32k || { echo "FAIL: variant D model column is not the ollama tag"; FAIL=1; }
+grep -qx 'ANTHROPIC_BASE_URL=http://localhost:'"$PORT" "$MOCK_DIR/envrec.txt" \
+  || { echo "FAIL: variant D did not export ANTHROPIC_BASE_URL"; FAIL=1; }
+grep -qx 'ANTHROPIC_AUTH_TOKEN=ollama' "$MOCK_DIR/envrec.txt" \
+  || { echo "FAIL: variant D did not export ANTHROPIC_AUTH_TOKEN"; FAIL=1; }
+grep -qx 'mock-tag-32k' "$MOCK_DIR/envrec.txt" \
+  || { echo "FAIL: variant D did not pass the tag as --model"; FAIL=1; }
+
+# An unreachable Ollama must cost nothing: no fixture copy, no claude process.
+rm -f "$MOCK_DIR/envrec.txt"
+set +e
+CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-envrec" \
+  CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
+  CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
+  CFBENCH_OLLAMA_URL="http://localhost:59999" \
+  PROVIDER_D="ollama:mock-tag-32k" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" D 1 >/dev/null 2>&1
+RC_D=$?
+set -e
+[ "$RC_D" -eq 2 ] || { echo "FAIL: unreachable ollama should exit 2, got $RC_D"; FAIL=1; }
+[ ! -f "$MOCK_DIR/envrec.txt" ] || { echo "FAIL: unreachable ollama still invoked claude"; FAIL=1; }
+
 # Outcome validity: every task must be broken pre-oracle and solvable post-oracle.
 bash "$BENCH_ROOT/runner/validate-tasks.sh" || FAIL=1
 

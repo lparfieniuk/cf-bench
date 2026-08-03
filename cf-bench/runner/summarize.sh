@@ -3,7 +3,12 @@
 # pass^n (all-repeats reliability), B-vs-A delta with Fisher exact p.
 set -euo pipefail
 python3 - "$@" <<'PY'
-import csv, math, statistics as st, sys
+import csv, math, os, statistics as st, sys
+
+# Deltas are computed against A by default. CFBENCH_BASELINE=B is what a provider
+# variant needs: D is a provider swap of B, so ΔD−B is the provider effect, while
+# ΔD−A would mix it with the config effect and answer no question anyone asked.
+BASELINE = os.environ.get("CFBENCH_BASELINE", "A")
 
 rows = []
 for path in sys.argv[1:]:
@@ -101,17 +106,17 @@ for t in tasks:
         ci = f"{100*lo:.0f}-{100*hi:.0f}"
         passn = "1" if k == n else "0"
         print(f'{t:<24}{v:<5}{n:<4}{s["succ"]:<7.0f}{ci:<12}{passn:<7}{s["cost"]:<11.4f}{s["turns"]:<11.0f}{s["out"]:<12.0f}{s["dur"]:<10.1f}')
-    deltas = [v for v in variants if v != "A" and "A" in stats]
+    deltas = [v for v in variants if v != BASELINE and BASELINE in stats]
     if deltas:
         print(f'  {"delta":<22}{"Δsucc":<8}{"p_succ":<11}{"Δcost%":<9}{"p_cost":<11}{"Δturns%":<9}{"p_turns":<11}')
     for v in deltas:
-        a, b = stats["A"], stats[v]
+        a, b = stats[BASELINE], stats[v]
         dcost = 100 * (b["cost"] - a["cost"]) / a["cost"] if (a["cost"] and b["cost"]) else 0
         dturns = 100 * (b["turns"] - a["turns"]) / a["turns"] if (a["turns"] and b["turns"]) else 0
         p_succ = fisher_two_sided(b["k"], b["n"] - b["k"], a["k"], a["n"] - a["k"])
         p_cost = mannwhitney_p(b["cost_v"], a["cost_v"])
         p_turns = mannwhitney_p(b["turns_v"], a["turns_v"])
-        print(f'  {"Δ"+v+"-A":<22}{b["succ"]-a["succ"]:<+8.0f}{format(p_succ, ".3g"):<11}'
+        print(f'  {"Δ"+v+"-"+BASELINE:<22}{b["succ"]-a["succ"]:<+8.0f}{format(p_succ, ".3g"):<11}'
               f'{dcost:<+9.1f}{format(p_cost, ".3g"):<11}{dturns:<+9.1f}{format(p_turns, ".3g"):<11}')
 
 print("\nmedians; succ% = pass rate, CI = Wilson 95%; pass^n = 1 when ALL n runs passed")
@@ -121,4 +126,11 @@ print("p_cost / p_turns = Mann-Whitney U (two-sided) on cost/turns. On cost-only
 print("success is 100% in every arm, so p_succ=1 by definition — then p_cost is the")
 print("ONLY result. Never read Δcost% without its own p.")
 print("N<10 → directional; p<0.05 at N≥10 → reportable.")
+print(f"deltas are against baseline {BASELINE} (set CFBENCH_BASELINE to change).")
+if any(r["model"].startswith("cfaios-") or ":" in r["model"] for r in rows):
+    print("WARNING: a local-provider arm is present. Its cost_usd is SYNTHETIC —")
+    print("Claude Code prices Ollama tokens through its first-party table, and the")
+    print("Ollama path has no prompt caching (cache_read=0), so Δcost% for that arm")
+    print("measures uncached token volume at a rate nobody paid. Read succ%, turns,")
+    print("duration — never cost.")
 PY
