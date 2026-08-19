@@ -1,0 +1,6 @@
+claude exit 1; stderr tail:
+⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+[claude-code:unrecognized_model] {"model":"cfaios-qwen3-14b-32k","query_source":"generate_session_title"}
+claude exit 1; stderr tail:
+⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+[claude-code:unrecognized_model] {"model":"cfaios-qwen3-14b-32k","query_source":"generate_session_title"}

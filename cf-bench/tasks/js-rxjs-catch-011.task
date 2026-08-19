@@ -13,3 +13,7 @@ HIDDEN="js-rxjs-catch-hidden"
 MAX_TURNS="12"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
 CHECK="check.sh"
+# Variant D = provider swap of B (see ts-fix-discount-001.task). Not in VARIANTS:
+# the paid A/B matrix must not gain an arm just because a local one exists. The
+# local arm is driven directly by cf-aios/scripts/local-arm-matrix.sh.
+PROVIDER_D="ollama:cfaios-qwen3-14b-32k"

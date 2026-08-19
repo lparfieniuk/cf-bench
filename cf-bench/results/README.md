@@ -39,6 +39,7 @@ Which file backs which headline claim:
 | contested convention flips: A 0% vs B 100% | `bench-20260718-091628.tsv` |
 | the contested-prior rule's control test: A 40% vs B 100% | `bench-20260718-145720.tsv` |
 | canonical conventions are cost-only, not success | `bench-20260718-101708.tsv` |
+| a 14b local model's competence boundary: 3/3 on one-bug-with-a-failing-test, 0/3 on conflicting-signal | `local-arm-20260818-230602.tsv` |
 
 ## Reading the columns
 
@@ -55,5 +56,16 @@ harness versions; A and B always share one, so deltas hold even when absolute va
   hand-vendored `node_modules` and a `package.json` declaring no dependencies; dependencies are now
   declared and lockfile-pinned. Both arms shift equally and every task still passes the oracle gate,
   but cell-by-cell comparability with future matrices is not claimed until re-measured.
+- **The letter D means two different things.** In the 07-22 files D is the ContextForge-core config
+  arm, served by `sonnet`; in `local-arm-*.tsv` D is the provider swap of B, served by a local Ollama
+  model. Read the `model` column before pooling any D. `js-express-errors-010` carries the old kind
+  and deliberately never gained a `PROVIDER_D`.
+- **`local-arm-*.tsv` files hold the D arm only.** They come from
+  `cf-aios/scripts/local-arm-matrix.sh`, which calls `run-task.sh` directly so that adding a local arm
+  to a task cannot schedule a paid one. `PROVIDER_D` in a `.task` file is therefore not in `VARIANTS`.
+- **A max-turns run is recorded as invalid, not as a failure.** `run-task.sh` blanks the success column
+  for any result JSON carrying `is_error`, and a run that hits `--max-turns` carries it. Two rows in
+  `local-arm-20260818-230602.tsv` are genuine failures sitting outside the success rate. Read
+  `terminal_reason` alongside `success`.
 - **The two 07-22 files include variants C and D**, the placebo and the ContextForge-core arm; earlier
   files are A/B only, so a pooled A count can exceed the per-file N.
