@@ -7,6 +7,8 @@ TASK_FILE="$1"; VARIANT="$2"; REPEAT="${3:-1}"
 BENCH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MODEL="${CFBENCH_MODEL:-sonnet}"
 CLAUDE_BIN="${CFBENCH_CLAUDE_BIN:-claude}"   # override with a mock in tests
+AGENT="${CFBENCH_AGENT:-claude}"             # claude | opencode — engine under test
+OPENCODE_BIN="${CFBENCH_OPENCODE_BIN:-opencode}"
 
 # shellcheck source=/dev/null
 HIDDEN=""
@@ -71,6 +73,15 @@ fi
 
 # A = bare fixture; B = task's CONFIG; any other letter needs CONFIG_<letter>
 # in the .task (e.g. CONFIG_C="generic" — placebo config, no task knowledge).
+#
+# Engine note: claude reads configs as CLAUDE.md (project instruction file);
+# opencode reads AGENTS.md. The same config directory feeds either engine —
+# the adapter renames during copy so a task stays engine-agnostic.
+CONFIG_DEST="CLAUDE.md"
+if [ "$AGENT" = "opencode" ]; then
+  CONFIG_DEST="AGENTS.md"
+  [ -n "${CFBENCH_OPENCODE_MODEL:-}" ] && MODEL="$CFBENCH_OPENCODE_MODEL"
+fi
 if [ "$VARIANT" = "B" ]; then
   cp -R "$BENCH_ROOT/configs/$CONFIG/." "$WORK/"
 elif [ "$VARIANT" != "A" ]; then
@@ -87,8 +98,21 @@ elif [ "$VARIANT" != "A" ]; then
   fi
   cp -R "$BENCH_ROOT/configs/$VARIANT_CONFIG/." "$WORK/"
 fi
+if [ "$AGENT" = "opencode" ] && [ -f "$WORK/CLAUDE.md" ] && [ ! -f "$WORK/AGENTS.md" ]; then
+  mv "$WORK/CLAUDE.md" "$WORK/AGENTS.md"
+fi
 
 RESULT_JSON="$WORK/.cfbench-result.json"
+if [ "$AGENT" = "opencode" ]; then
+  set +e
+  ( cd "$WORK" && env "$OPENCODE_BIN" run --auto --format json \
+      -m "${MODEL}" \
+      "$PROMPT" \
+      > "$RESULT_JSON" 2>>"$WORK/.cfbench-stderr.log" )
+  ENGINE_EXIT=$?
+  set -e
+  TERMINAL_REASON="opencode_exit_${ENGINE_EXIT}"
+else
 set +e
 ( cd "$WORK" && "${CLAUDE_ENV[@]}" "$CLAUDE_BIN" -p "$PROMPT" \
     --output-format json \
@@ -100,10 +124,13 @@ set +e
     > "$RESULT_JSON" 2>>"$WORK/.cfbench-stderr.log" )
 CLAUDE_EXIT=$?
 set -e
+TERMINAL_REASON=""
+fi
 
 # Diagnose invalid runs: without this the mktemp cleanup eats the only error trace.
-if [ "$CLAUDE_EXIT" -ne 0 ]; then
-  echo "claude exit $CLAUDE_EXIT; stderr tail:" >&2
+ENGINE_EXIT="${ENGINE_EXIT:-$CLAUDE_EXIT}"
+if [ "$ENGINE_EXIT" -ne 0 ]; then
+  echo "engine ($AGENT) exit $ENGINE_EXIT; stderr tail:" >&2
   tail -3 "$WORK/.cfbench-stderr.log" >&2 || true
 fi
 
@@ -117,10 +144,13 @@ if bash "$WORK/$CHECK" 2>/dev/null; then SUCCESS=1; else SUCCESS=0; fi
 
 # CFBENCH_CLI_VERSION override keeps mocks from being invoked with --version in tests.
 CLI_VERSION="${CFBENCH_CLI_VERSION:-$("$CLAUDE_BIN" --version 2>/dev/null | head -1 || echo unknown)}"
+if [ "$AGENT" = "opencode" ]; then
+  CLI_VERSION="${CFBENCH_CLI_VERSION:-$("$OPENCODE_BIN" --version 2>/dev/null | head -1 || echo unknown)}"
+fi
 
-python3 - "$RESULT_JSON" "$TASK_ID" "$VARIANT" "$REPEAT" "$MODEL" "$SUCCESS" "$CLAUDE_EXIT" "$CLI_VERSION" <<'PY'
+python3 - "$RESULT_JSON" "$TASK_ID" "$VARIANT" "$REPEAT" "$MODEL" "$SUCCESS" "$ENGINE_EXIT" "$CLI_VERSION" "$AGENT" "$TERMINAL_REASON" <<'PY'
 import json, sys, datetime
-path, task, variant, repeat, model, success, cexit, cli_version = sys.argv[1:9]
+path, task, variant, repeat, model, success, eexit, cli_version, agent, terminal_reason = sys.argv[1:11]
 try:
     d = json.load(open(path))
 except Exception:
@@ -137,7 +167,7 @@ row = [
     f'{d.get("duration_ms", "")}',
     f'{u.get("input_tokens", "")}', f'{u.get("cache_creation_input_tokens", "")}',
     f'{u.get("cache_read_input_tokens", "")}', f'{u.get("output_tokens", "")}',
-    d.get("terminal_reason", f"claude_exit_{cexit}"), d.get("session_id", ""),
+    terminal_reason or d.get("terminal_reason", f"{agent}_exit_{eexit}"), d.get("session_id", ""),
     cli_version,
 ]
 print("\t".join(str(c) for c in row))
