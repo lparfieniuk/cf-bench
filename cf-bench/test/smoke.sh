@@ -105,7 +105,10 @@ echo '{"type":"result","subtype":"success","num_turns":4,"duration_ms":99,"total
 EOF
 chmod +x "$MOCK_DIR/claude-envrec"
 
+# CFBENCH_CLI_VERSION: without it the --version probe re-runs the same mock and
+# overwrites the env record we are about to assert on.
 ROW6=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-envrec" \
+  CFBENCH_CLI_VERSION=mock \
   CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
   CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
   CFBENCH_OLLAMA_URL="http://localhost:$PORT" \
@@ -124,6 +127,7 @@ grep -qx 'mock-tag-32k' "$MOCK_DIR/envrec.txt" \
 rm -f "$MOCK_DIR/envrec.txt"
 set +e
 CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-envrec" \
+  CFBENCH_CLI_VERSION=mock \
   CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
   CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
   CFBENCH_OLLAMA_URL="http://localhost:59999" \

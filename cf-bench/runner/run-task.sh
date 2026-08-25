@@ -12,6 +12,10 @@ OPENCODE_BIN="${CFBENCH_OPENCODE_BIN:-opencode}"
 
 # shellcheck source=/dev/null
 HIDDEN=""
+# The task file declares PROVIDER_<V>, but an explicit env var from the caller wins
+# (same precedence as every CFBENCH_* override) -- captured before source clobbers it.
+PROVIDER_VAR="PROVIDER_$VARIANT"
+PROVIDER_OVERRIDE="${!PROVIDER_VAR:-}"
 source "$TASK_FILE"
 
 # Deps are installed once by runner/setup-fixtures.sh — a run must never touch the
@@ -32,8 +36,7 @@ fi
 #
 # Routing is session-wide (there is no per-subagent provider), so the boundary is
 # this process: two env vars and --model. No proxy, no gateway.
-PROVIDER_VAR="PROVIDER_$VARIANT"
-PROVIDER="${!PROVIDER_VAR:-anthropic}"
+PROVIDER="${PROVIDER_OVERRIDE:-${!PROVIDER_VAR:-anthropic}}"
 CLAUDE_ENV=(env)
 case "$PROVIDER" in
   anthropic) ;;
