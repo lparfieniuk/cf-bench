@@ -105,10 +105,7 @@ echo '{"type":"result","subtype":"success","num_turns":4,"duration_ms":99,"total
 EOF
 chmod +x "$MOCK_DIR/claude-envrec"
 
-# CFBENCH_CLI_VERSION: without it the --version probe re-runs the same mock and
-# overwrites the env record we are about to assert on.
 ROW6=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-envrec" \
-  CFBENCH_CLI_VERSION=mock \
   CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
   CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
   CFBENCH_OLLAMA_URL="http://localhost:$PORT" \
@@ -127,7 +124,6 @@ grep -qx 'mock-tag-32k' "$MOCK_DIR/envrec.txt" \
 rm -f "$MOCK_DIR/envrec.txt"
 set +e
 CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-envrec" \
-  CFBENCH_CLI_VERSION=mock \
   CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
   CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
   CFBENCH_OLLAMA_URL="http://localhost:59999" \
@@ -137,6 +133,104 @@ RC_D=$?
 set -e
 [ "$RC_D" -eq 2 ] || { echo "FAIL: unreachable ollama should exit 2, got $RC_D"; FAIL=1; }
 [ ! -f "$MOCK_DIR/envrec.txt" ] || { echo "FAIL: unreachable ollama still invoked claude"; FAIL=1; }
+
+# The opencode engine arm. opencode takes no --max-turns and no --allowedTools, so
+# the ceiling and the allowlist have to land in the project opencode.json -- if they
+# do not, the two engines are not running the same experiment and every delta is
+# confounded. The mock records the config it was handed and emits the real JSONL
+# event shape (verified against opencode 1.18.21).
+cat > "$MOCK_DIR/opencode-mock" <<'EOF'
+#!/usr/bin/env bash
+REC_DIR="$(dirname "$CFBENCH_ENV_RECORD")"
+printf '%s\n' "$@" > "$CFBENCH_ENV_RECORD"
+cp opencode.json "$REC_DIR/opencode-seen.json" 2>/dev/null
+ls > "$REC_DIR/workdir-ls.txt"
+sed -i '' -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js 2>/dev/null \
+  || sed -i -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js
+cat <<'JSONL'
+{"type":"step_start","timestamp":1000,"sessionID":"ses_mock","part":{}}
+{"type":"step_finish","timestamp":1200,"sessionID":"ses_mock","part":{"reason":"tool-calls","tokens":{"input":100,"output":10,"reasoning":0,"cache":{"write":1,"read":2}},"cost":0.5}}
+{"type":"step_finish","timestamp":1500,"sessionID":"ses_mock","part":{"reason":"stop","tokens":{"input":200,"output":20,"reasoning":0,"cache":{"write":3,"read":4}},"cost":0.25}}
+JSONL
+EOF
+chmod +x "$MOCK_DIR/opencode-mock"
+
+rm -f "$MOCK_DIR/envrec.txt" "$MOCK_DIR/opencode-seen.json"
+ROW7=$(CFBENCH_AGENT=opencode \
+  CFBENCH_OPENCODE_BIN="$MOCK_DIR/opencode-mock" \
+  CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
+  CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
+  CFBENCH_OLLAMA_URL="http://localhost:$PORT" \
+  PROVIDER_D="ollama:mock-tag-32k" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" D 1)
+echo "$ROW7" | cut -f6 | grep -qx 1 || { echo "FAIL: opencode run broken"; FAIL=1; }
+# provider/model, not the bare tag: opencode resolves a bare id against its default
+# provider, which would serve the tokens from somewhere else than the row claims.
+echo "$ROW7" | cut -f5 | grep -qx 'ollama/mock-tag-32k' \
+  || { echo "FAIL: opencode model column is not provider/model"; FAIL=1; }
+grep -qx 'ollama/mock-tag-32k' "$MOCK_DIR/envrec.txt" \
+  || { echo "FAIL: opencode did not get the provider/model id"; FAIL=1; }
+# The JSONL event stream must be folded into the same columns the claude arm fills.
+echo "$ROW7" | cut -f7 | grep -qx 0.75 || { echo "FAIL: opencode cost is not the step sum"; FAIL=1; }
+echo "$ROW7" | cut -f8 | grep -qx 2 || { echo "FAIL: opencode turns is not the step count"; FAIL=1; }
+echo "$ROW7" | cut -f9 | grep -qx 500 || { echo "FAIL: opencode duration is not the event span"; FAIL=1; }
+echo "$ROW7" | cut -f10 | grep -qx 300 || { echo "FAIL: opencode input tokens not summed"; FAIL=1; }
+echo "$ROW7" | cut -f13 | grep -qx 30 || { echo "FAIL: opencode output tokens not summed"; FAIL=1; }
+echo "$ROW7" | cut -f14 | grep -qx stop \
+  || { echo "FAIL: opencode terminal_reason is not the last step reason"; FAIL=1; }
+echo "$ROW7" | cut -f15 | grep -qx ses_mock || { echo "FAIL: opencode session_id lost"; FAIL=1; }
+# Config parity with the claude flags: turn ceiling, tool allowlist, provider route.
+grep -qx AGENTS.md "$MOCK_DIR/workdir-ls.txt" || { echo "FAIL: config not renamed to AGENTS.md"; FAIL=1; }
+grep -qx CLAUDE.md "$MOCK_DIR/workdir-ls.txt" && { echo "FAIL: CLAUDE.md left next to AGENTS.md"; FAIL=1; }
+python3 - "$MOCK_DIR/opencode-seen.json" "$PORT" <<'PY' || FAIL=1
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+p = cfg.get("permission", {})
+ok = True
+def check(cond, msg):
+    global ok
+    if not cond:
+        print("FAIL: " + msg)
+        ok = False
+# MAX_TURNS="15" in ts-fix-discount-001.task
+check(cfg.get("agent", {}).get("build", {}).get("steps") == 15, "opencode.json steps is not MAX_TURNS")
+check(p.get("bash", {}).get("node *") == "allow", "Bash(node:*) not translated to an allow rule")
+check(p.get("bash", {}).get("npm *") == "allow", "Bash(npm:*) not translated to an allow rule")
+check(p.get("bash", {}).get("*") == "deny", "ungranted bash commands are not denied")
+check(p.get("edit") == "allow", "Edit/Write not granted")
+check(p.get("webfetch") == "deny" and p.get("websearch") == "deny", "network tools not denied")
+url = cfg.get("provider", {}).get("ollama", {}).get("options", {}).get("baseURL")
+check(url == "http://localhost:%s/v1" % sys.argv[2], "ollama baseURL missing or wrong: %r" % url)
+sys.exit(0 if ok else 1)
+PY
+
+# An opencode run that never produced a step is INVALID, not a failure: the success
+# column must go empty so summaries drop the row instead of scoring the outage.
+cat > "$MOCK_DIR/opencode-broken" <<'EOF'
+#!/usr/bin/env bash
+echo '{"type":"error","timestamp":1000,"sessionID":"ses_bad","error":{"name":"UnknownError","data":{"message":"boom"}}}'
+exit 1
+EOF
+chmod +x "$MOCK_DIR/opencode-broken"
+ROW8=$(CFBENCH_AGENT=opencode \
+  CFBENCH_OPENCODE_BIN="$MOCK_DIR/opencode-broken" \
+  CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
+  CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
+  CFBENCH_OLLAMA_URL="http://localhost:$PORT" \
+  PROVIDER_D="ollama:mock-tag-32k" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" D 1 2>/dev/null)
+[ -z "$(echo "$ROW8" | cut -f6)" ] || { echo "FAIL: opencode error event must void the success column"; FAIL=1; }
+echo "$ROW8" | cut -f14 | grep -qx api_error \
+  || { echo "FAIL: opencode error event must be recorded as api_error"; FAIL=1; }
+
+# opencode without a provider-swap needs an explicit provider/model id -- "sonnet"
+# is a claude alias and would resolve against whatever opencode defaults to.
+set +e
+CFBENCH_AGENT=opencode CFBENCH_OPENCODE_BIN="$MOCK_DIR/opencode-mock" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" B 1 >/dev/null 2>&1
+RC_OC=$?
+set -e
+[ "$RC_OC" -eq 2 ] || { echo "FAIL: opencode without CFBENCH_OPENCODE_MODEL should exit 2, got $RC_OC"; FAIL=1; }
 
 # Outcome validity: every task must be broken pre-oracle and solvable post-oracle.
 bash "$BENCH_ROOT/runner/validate-tasks.sh" || FAIL=1

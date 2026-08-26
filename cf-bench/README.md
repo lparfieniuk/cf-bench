@@ -44,7 +44,7 @@ the expected C≈A proves the B effect is the encoded knowledge, not the mere pr
   model/harness version is shared by A and B, so the delta stays meaningful, but absolute values
   depend on the CLI version.
 - N=3 only detects large effects; a published leaderboard needs N≥10 plus confidence intervals.
-- One agent so far (Claude Code headless); Codex / Cursor CLI are on the roadmap (cross-agent is the edge).
+- Two engines (Claude Code headless, opencode); Codex / Cursor CLI are on the roadmap (cross-agent is the edge).
 
 ## Usage
 
@@ -67,6 +67,39 @@ runner/validate-tasks.sh                         # per task: check fails before 
 # smoke test with no LLM cost (mock claude + validate-tasks):
 test/smoke.sh
 ```
+
+## Engines and providers
+
+Two axes, independent of each other. The engine is the CLI under test; the provider is
+who serves the tokens.
+
+```bash
+# engine: claude (default) or opencode
+CFBENCH_AGENT=opencode CFBENCH_OPENCODE_MODEL=anthropic/claude-sonnet-4-5 runner/run-bench.sh
+
+# provider swap: declared per variant in the .task file
+#   VARIANTS="A B D"
+#   PROVIDER_D="ollama:cfaios-qwen3-14b-32k"
+# an exported PROVIDER_D overrides the task file (env beats file, as everywhere here)
+```
+
+Parity between the engines is enforced by the runner, not by the operator:
+
+| knob | claude | opencode |
+|---|---|---|
+| model | `--model` (alias or ollama tag) | `-m provider/model` |
+| turn ceiling | `--max-turns $MAX_TURNS` | `agent.build.steps` in a generated `opencode.json` |
+| tool allowlist | `--allowedTools $ALLOWED_TOOLS` | `permission` in that same file; anything ungranted is `deny` |
+| ollama route | `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` | `provider.ollama.options.baseURL` (opencode ignores the `ANTHROPIC_*` vars) |
+
+Prerequisite for the opencode + ollama arm, once per machine:
+
+```bash
+cd ~/.config/opencode && npm install @ai-sdk/openai-compatible
+```
+
+Without it opencode tries to install the provider package during the run — that needs
+the network the benchmark forbids, and it hangs with no output rather than failing.
 
 ## Task structure
 

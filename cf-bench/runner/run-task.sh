@@ -38,6 +38,7 @@ fi
 # this process: two env vars and --model. No proxy, no gateway.
 PROVIDER="${PROVIDER_OVERRIDE:-${!PROVIDER_VAR:-anthropic}}"
 CLAUDE_ENV=(env)
+OLLAMA_URL=""
 case "$PROVIDER" in
   anthropic) ;;
   ollama:?*)
@@ -64,6 +65,23 @@ case "$PROVIDER" in
     ;;
 esac
 
+# The model id is engine-shaped: claude takes an alias ("sonnet") or the bare ollama
+# tag behind ANTHROPIC_BASE_URL, opencode takes provider/model and routes from its
+# own config. A task-declared PROVIDER_<V> outranks the global CFBENCH_OPENCODE_MODEL
+# -- otherwise one exported variable silently re-provisions every variant in a matrix.
+if [ "$AGENT" = "opencode" ]; then
+  case "$PROVIDER" in
+    ollama:*) MODEL="ollama/$OLLAMA_TAG" ;;
+    *)
+      if [ -z "${CFBENCH_OPENCODE_MODEL:-}" ]; then
+        echo "FATAL: CFBENCH_AGENT=opencode needs CFBENCH_OPENCODE_MODEL as provider/model (e.g. anthropic/claude-sonnet-4-5)" >&2
+        exit 2
+      fi
+      MODEL="$CFBENCH_OPENCODE_MODEL"
+      ;;
+  esac
+fi
+
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/cfbench.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 cp -R "$BENCH_ROOT/fixtures/$FIXTURE/." "$WORK/"
@@ -78,13 +96,8 @@ fi
 # in the .task (e.g. CONFIG_C="generic" — placebo config, no task knowledge).
 #
 # Engine note: claude reads configs as CLAUDE.md (project instruction file);
-# opencode reads AGENTS.md. The same config directory feeds either engine —
-# the adapter renames during copy so a task stays engine-agnostic.
-CONFIG_DEST="CLAUDE.md"
-if [ "$AGENT" = "opencode" ]; then
-  CONFIG_DEST="AGENTS.md"
-  [ -n "${CFBENCH_OPENCODE_MODEL:-}" ] && MODEL="$CFBENCH_OPENCODE_MODEL"
-fi
+# opencode reads AGENTS.md. The same config directory feeds either engine — the
+# copied CLAUDE.md is renamed below, so a task stays engine-agnostic.
 if [ "$VARIANT" = "B" ]; then
   cp -R "$BENCH_ROOT/configs/$CONFIG/." "$WORK/"
 elif [ "$VARIANT" != "A" ]; then
@@ -107,6 +120,40 @@ fi
 
 RESULT_JSON="$WORK/.cfbench-result.json"
 if [ "$AGENT" = "opencode" ]; then
+  # opencode has no --max-turns and no --allowedTools: the turn ceiling and the
+  # tool allowlist live in a project opencode.json, and a provider swap is a
+  # baseURL in that same file (opencode ignores ANTHROPIC_BASE_URL, so CLAUDE_ENV
+  # would route nothing). Same three knobs as the claude flags, other surface.
+  python3 - "$WORK/opencode.json" "$MAX_TURNS" "$ALLOWED_TOOLS" "$MODEL" "$OLLAMA_URL" <<'OCCFG'
+import json, sys
+out, max_turns, allowed, model, ollama_url = sys.argv[1:6]
+
+# ALLOWED_TOOLS is written in claude's vocabulary; translate it once.
+bash_rules, perm = {}, {"webfetch": "deny", "websearch": "deny", "task": "deny"}
+names = {"Read": "read", "Glob": "glob", "Grep": "grep", "Edit": "edit", "Write": "edit"}
+for tool in [t for t in allowed.split(",") if t]:
+    if tool.startswith("Bash(") and tool.endswith(")"):
+        bash_rules[tool[5:-1].replace(":*", " *")] = "allow"
+    elif tool in names:
+        perm[names[tool]] = "allow"
+# Whatever the task did not grant is denied, so both engines run with the same
+# hands -- and an offline run stays offline (no npm install, no curl).
+# Known asymmetry: opencode's todowrite stays allowed (denying it costs turns on a
+# bookkeeping call that cannot touch the fixture); claude has no TodoWrite grant.
+bash_rules["*"] = "deny"
+perm["bash"] = bash_rules
+
+cfg = {"permission": perm, "agent": {"build": {"steps": int(max_turns)}}}
+if model.startswith("ollama/"):
+    tag = model.split("/", 1)[1]
+    cfg["provider"] = {"ollama": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "Ollama",
+        "options": {"baseURL": ollama_url.rstrip("/") + "/v1"},
+        "models": {tag: {"name": tag}},
+    }}
+json.dump(cfg, open(out, "w"), indent=2)
+OCCFG
   set +e
   ( cd "$WORK" && env "$OPENCODE_BIN" run --auto --format json \
       -m "${MODEL}" \
@@ -114,7 +161,9 @@ if [ "$AGENT" = "opencode" ]; then
       > "$RESULT_JSON" 2>>"$WORK/.cfbench-stderr.log" )
   ENGINE_EXIT=$?
   set -e
-  TERMINAL_REASON="opencode_exit_${ENGINE_EXIT}"
+  # Left empty on purpose: the real reason comes off the last step_finish event in
+  # the metrics block below, and only falls back to the exit code if none arrived.
+  TERMINAL_REASON=""
 else
 set +e
 ( cd "$WORK" && "${CLAUDE_ENV[@]}" "$CLAUDE_BIN" -p "$PROMPT" \
@@ -158,6 +207,40 @@ try:
     d = json.load(open(path))
 except Exception:
     d = {}
+
+# opencode's --format json is a JSONL event stream, not one result object, so it
+# never parses above. Fold it into the claude result shape here and the rest of the
+# runner (and every consumer of the TSV) stays engine-agnostic.
+if agent == "opencode":
+    events = []
+    for line in open(path, errors="replace"):
+        line = line.strip()
+        if line:
+            try:
+                events.append(json.loads(line))
+            except Exception:
+                pass
+    steps = [e.get("part", {}) for e in events if e.get("type") == "step_finish"]
+    errors = [e for e in events if e.get("type") == "error"]
+    tok = lambda k: sum(s.get("tokens", {}).get(k, 0) for s in steps)
+    cache = lambda k: sum(s.get("tokens", {}).get("cache", {}).get(k, 0) for s in steps)
+    d = {
+        "total_cost_usd": sum(s.get("cost", 0) for s in steps),
+        "num_turns": len(steps),
+        "duration_ms": events[-1].get("timestamp", 0) - events[0].get("timestamp", 0) if events else "",
+        "session_id": events[0].get("sessionID", "") if events else "",
+        "usage": {
+            "input_tokens": tok("input"), "output_tokens": tok("output"),
+            "cache_creation_input_tokens": cache("write"), "cache_read_input_tokens": cache("read"),
+        },
+        "terminal_reason": steps[-1].get("reason", "") if steps else "",
+    }
+    # An error event, or a stream with no finished step at all (crash, rate limit,
+    # killed process), means the run never happened -- INVALID, not a failure.
+    if errors or not steps:
+        d["is_error"] = True
+        d["terminal_reason"] = "api_error"
+
 u = d.get("usage", {})
 # A run that never executed (API error, rate limit) is INVALID, not a failure:
 # success column stays empty so summaries exclude it instead of skewing rates.
@@ -170,7 +253,7 @@ row = [
     f'{d.get("duration_ms", "")}',
     f'{u.get("input_tokens", "")}', f'{u.get("cache_creation_input_tokens", "")}',
     f'{u.get("cache_read_input_tokens", "")}', f'{u.get("output_tokens", "")}',
-    terminal_reason or d.get("terminal_reason", f"{agent}_exit_{eexit}"), d.get("session_id", ""),
+    terminal_reason or d.get("terminal_reason") or f"{agent}_exit_{eexit}", d.get("session_id", ""),
     cli_version,
 ]
 print("\t".join(str(c) for c in row))
