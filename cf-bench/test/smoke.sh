@@ -143,14 +143,16 @@ cat > "$MOCK_DIR/opencode-mock" <<'EOF'
 #!/usr/bin/env bash
 REC_DIR="$(dirname "$CFBENCH_ENV_RECORD")"
 printf '%s\n' "$@" > "$CFBENCH_ENV_RECORD"
+env | grep '^OPENCODE_' | sort > "$REC_DIR/opencode-env.txt"
 cp opencode.json "$REC_DIR/opencode-seen.json" 2>/dev/null
 ls > "$REC_DIR/workdir-ls.txt"
 sed -i '' -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js 2>/dev/null \
   || sed -i -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js
 cat <<'JSONL'
 {"type":"step_start","timestamp":1000,"sessionID":"ses_mock","part":{}}
-{"type":"step_finish","timestamp":1200,"sessionID":"ses_mock","part":{"reason":"tool-calls","tokens":{"input":100,"output":10,"reasoning":0,"cache":{"write":1,"read":2}},"cost":0.5}}
-{"type":"step_finish","timestamp":1500,"sessionID":"ses_mock","part":{"reason":"stop","tokens":{"input":200,"output":20,"reasoning":0,"cache":{"write":3,"read":4}},"cost":0.25}}
+{"type":"error","timestamp":1100,"sessionID":"ses_mock","error":{"name":"ProviderError","data":{"message":"transient"}}}
+{"type":"step_finish","timestamp":1200,"sessionID":"ses_mock","part":{"reason":"tool-calls","tokens":{"input":100,"output":10,"reasoning":5,"cache":{"write":1,"read":2}},"cost":0.5}}
+{"type":"step_finish","timestamp":1500,"sessionID":"ses_mock","part":{"reason":"stop","tokens":{"input":200,"output":20,"reasoning":7,"cache":{"write":3,"read":4}},"cost":0.25}}
 JSONL
 EOF
 chmod +x "$MOCK_DIR/opencode-mock"
@@ -173,9 +175,19 @@ grep -qx 'ollama/mock-tag-32k' "$MOCK_DIR/envrec.txt" \
 # The JSONL event stream must be folded into the same columns the claude arm fills.
 echo "$ROW7" | cut -f7 | grep -qx 0.75 || { echo "FAIL: opencode cost is not the step sum"; FAIL=1; }
 echo "$ROW7" | cut -f8 | grep -qx 2 || { echo "FAIL: opencode turns is not the step count"; FAIL=1; }
-echo "$ROW7" | cut -f9 | grep -qx 500 || { echo "FAIL: opencode duration is not the event span"; FAIL=1; }
+# duration_ms is now wall clock around the engine call, not the event span: the
+# opencode timestamps start after server boot and model load, so a cold run looked warm.
+echo "$ROW7" | cut -f9 | grep -qE '^[0-9]+$' \
+  || { echo "FAIL: opencode duration_ms is not a wall-clock integer"; FAIL=1; }
+echo "$ROW" | cut -f9 | grep -qE '^[0-9]+$' \
+  || { echo "FAIL: claude duration_ms is not a wall-clock integer"; FAIL=1; }
 echo "$ROW7" | cut -f10 | grep -qx 300 || { echo "FAIL: opencode input tokens not summed"; FAIL=1; }
-echo "$ROW7" | cut -f13 | grep -qx 30 || { echo "FAIL: opencode output tokens not summed"; FAIL=1; }
+# reasoning is a sibling of output in opencode's step struct; Anthropic counts
+# thinking inside output_tokens, so the column has to carry both (10+20+5+7).
+echo "$ROW7" | cut -f13 | grep -qx 42 || { echo "FAIL: opencode output tokens drop reasoning"; FAIL=1; }
+# An error event that is NOT the last event is a transient failure the engine retried
+# past: the run completed and must keep its success column, or every retry shrinks N.
+echo "$ROW7" | cut -f6 | grep -qx 1 || { echo "FAIL: a retried-past error voided a completed run"; FAIL=1; }
 echo "$ROW7" | cut -f14 | grep -qx stop \
   || { echo "FAIL: opencode terminal_reason is not the last step reason"; FAIL=1; }
 echo "$ROW7" | cut -f15 | grep -qx ses_mock || { echo "FAIL: opencode session_id lost"; FAIL=1; }
@@ -198,11 +210,53 @@ check(p.get("bash", {}).get("node *") == "allow", "Bash(node:*) not translated t
 check(p.get("bash", {}).get("npm *") == "allow", "Bash(npm:*) not translated to an allow rule")
 check(p.get("bash", {}).get("*") == "deny", "ungranted bash commands are not denied")
 check(p.get("edit") == "allow", "Edit/Write not granted")
-check(p.get("webfetch") == "deny" and p.get("websearch") == "deny", "network tools not denied")
+# ORDER, not just presence: opencode resolves permissions with findLast and strips
+# every tool whose last matching rule is a wildcard deny. The catch-all last therefore
+# deleted bash from the toolset (verified against opencode 1.18.21).
+check(list(p.keys())[0] == "*" and p["*"] == "deny",
+      "the catch-all deny is not the FIRST permission rule (bash would be stripped)")
+check(list(p["bash"].keys())[0] == "*",
+      "the catch-all deny is not the FIRST bash rule (bash would be stripped)")
+# A real allowlist, not --auto plus a deny list: --auto auto-approves anything not
+# explicitly denied, so every ungranted tool must fall under the leading catch-all.
+for k, v in p.items():
+    if k != "bash":
+        check(k == "*" or v == "allow", "unexpected non-allow permission key %r" % k)
+check(not ({"todowrite", "skill", "task", "webfetch", "websearch"} & set(p)),
+      "ungranted tools are listed explicitly instead of falling under the catch-all")
 url = cfg.get("provider", {}).get("ollama", {}).get("options", {}).get("baseURL")
 check(url == "http://localhost:%s/v1" % sys.argv[2], "ollama baseURL missing or wrong: %r" % url)
+# num_ctx must reach the model as limit.context: without it opencode sets it to 0 and
+# switches auto-compaction off, so the run overruns the window the preflight guards.
+lim = cfg.get("provider", {}).get("ollama", {}).get("models", {}).get("mock-tag-32k", {}).get("limit", {})
+check(lim.get("context") == 32768, "num_ctx did not reach limit.context: %r" % lim)
+check(lim.get("output") == 8192, "limit.output missing (a limit without it is a config error): %r" % lim)
+# OPENCODE_DISABLE_PROJECT_CONFIG also hides AGENTS.md, and a relative instructions
+# entry then globs the operator's config dir -- only an absolute path survives both.
+ins = cfg.get("instructions", [])
+check(len(ins) == 1 and ins[0].startswith("/") and ins[0].endswith("/AGENTS.md"),
+      "config file not pinned as an absolute instructions path: %r" % ins)
 sys.exit(0 if ok else 1)
 PY
+
+# Isolation parity with claude's --setting-sources project.
+grep -qx 'OPENCODE_DISABLE_PROJECT_CONFIG=1' "$MOCK_DIR/opencode-env.txt" \
+  || { echo "FAIL: opencode run is not isolated from the operator's config walk"; FAIL=1; }
+grep -q '^OPENCODE_CONFIG=.*/opencode.json$' "$MOCK_DIR/opencode-env.txt" \
+  || { echo "FAIL: the generated opencode.json is not pinned via OPENCODE_CONFIG"; FAIL=1; }
+
+# Variant A under opencode: no config directory, so no AGENTS.md and therefore no
+# `instructions` key -- the only opencode path the D-variant cases never exercise.
+rm -f "$MOCK_DIR/envrec.txt" "$MOCK_DIR/opencode-seen.json"
+ROW7A=$(CFBENCH_AGENT=opencode \
+  CFBENCH_OPENCODE_BIN="$MOCK_DIR/opencode-mock" \
+  CFBENCH_OPENCODE_MODEL=mock/model \
+  CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" A 1)
+echo "$ROW7A" | cut -f6 | grep -qx 1 || { echo "FAIL: opencode variant A run broken"; FAIL=1; }
+python3 -c 'import json,sys; c=json.load(open(sys.argv[1])); sys.exit(0 if "instructions" not in c else 1)' \
+  "$MOCK_DIR/opencode-seen.json" \
+  || { echo "FAIL: variant A emitted an instructions path with no config to point at"; FAIL=1; }
 
 # An opencode run that never produced a step is INVALID, not a failure: the success
 # column must go empty so summaries drop the row instead of scoring the outage.
@@ -222,6 +276,26 @@ ROW8=$(CFBENCH_AGENT=opencode \
 [ -z "$(echo "$ROW8" | cut -f6)" ] || { echo "FAIL: opencode error event must void the success column"; FAIL=1; }
 echo "$ROW8" | cut -f14 | grep -qx api_error \
   || { echo "FAIL: opencode error event must be recorded as api_error"; FAIL=1; }
+
+# The other half of that gate: steps DID finish but the stream ends on an error --
+# the run died mid-flight, so it is invalid too.
+cat > "$MOCK_DIR/opencode-died" <<'EOF'
+#!/usr/bin/env bash
+cat <<'JSONL'
+{"type":"step_finish","timestamp":1200,"sessionID":"ses_died","part":{"reason":"tool-calls","tokens":{"input":1,"output":1,"reasoning":0,"cache":{"write":0,"read":0}},"cost":0.01}}
+{"type":"error","timestamp":1300,"sessionID":"ses_died","error":{"name":"RateLimit","data":{"message":"429"}}}
+JSONL
+exit 1
+EOF
+chmod +x "$MOCK_DIR/opencode-died"
+ROW9=$(CFBENCH_AGENT=opencode \
+  CFBENCH_OPENCODE_BIN="$MOCK_DIR/opencode-died" \
+  CFBENCH_ENV_RECORD="$MOCK_DIR/envrec.txt" \
+  CFBENCH_OLLAMA_BIN="$MOCK_DIR/ollama-mock" \
+  CFBENCH_OLLAMA_URL="http://localhost:$PORT" \
+  PROVIDER_D="ollama:mock-tag-32k" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" D 1 2>/dev/null)
+[ -z "$(echo "$ROW9" | cut -f6)" ] || { echo "FAIL: a stream ending on an error must void the success column"; FAIL=1; }
 
 # opencode without a provider-swap needs an explicit provider/model id -- "sonnet"
 # is a claude alias and would resolve against whatever opencode defaults to.

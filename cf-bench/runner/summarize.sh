@@ -127,6 +127,13 @@ print("success is 100% in every arm, so p_succ=1 by definition — then p_cost i
 print("ONLY result. Never read Δcost% without its own p.")
 print("N<10 → directional; p<0.05 at N≥10 → reportable.")
 print(f"deltas are against baseline {BASELINE} (set CFBENCH_BASELINE to change).")
+# "provider/model" is the opencode model shape. A claude arm pinned to an "hf.co/..."
+# ollama tag trips this too -- a false warning, never a false silence. The real fix is
+# an `agent` column in the TSV; add it if this heuristic ever misfires in practice.
+if any("/" in r["model"] for r in rows) and any("/" not in r["model"] for r in rows):
+    print("WARNING: rows from more than one engine are mixed here. `turns` is NOT the")
+    print("same quantity across engines — claude reports the CLI's turn accounting,")
+    print("the opencode arm counts step-finish parts. Compare turns within an engine.")
 if any(r["model"].startswith("cfaios-") or ":" in r["model"] for r in rows):
     print("WARNING: a local-provider arm is present. Its cost_usd is SYNTHETIC —")
     print("Claude Code prices Ollama tokens through its first-party table, and the")

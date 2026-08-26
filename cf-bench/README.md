@@ -11,16 +11,28 @@ the expected C≈A proves the B effect is the encoded knowledge, not the mere pr
 | Column | Source |
 |---|---|
 | `success` | the fixture's `check.sh` (exit 0) — a deterministic assertion, not an LLM judge |
-| `cost_usd`, `turns`, `duration_ms` | `total_cost_usd`, `num_turns`, `duration_ms` from the result JSON |
+| `cost_usd`, `turns` | `total_cost_usd`, `num_turns` from the result JSON. **`turns` is not comparable across engines**: claude reports the CLI's own turn accounting, opencode's arm counts `step-finish` parts. Compare turns within an engine only |
+| `duration_ms` | wall clock around the engine call, both engines. opencode's event timestamps start after server boot, config load and model load into VRAM, so a cold-start local run measured the same as a warm one. **Breaks with history**: rows written before 2026-08-26 carry the claude CLI's self-reported duration instead — do not compare a `duration_ms` across that boundary |
 | `in_tokens`, `cache_creation`, `cache_read`, `out_tokens` | `usage.*` |
 | `terminal_reason`, `session_id` | diagnostics / transcript audit |
-| `cli_version` | `claude --version` — reproducibility (harness variance) |
+| `cli_version` | the engine binary's `--version` — reproducibility (harness variance) |
 
 ## Methodology
 
 - **Isolation**: `--setting-sources project` — the user's global plugins and CLAUDE.md do NOT enter
   the run (verified: cache_creation 15.0k → 8.7k once cut off). Variant A = bare fixture;
   variant B = fixture + contents of `configs/<task-config>/`.
+  On the opencode arm the equivalent is `OPENCODE_DISABLE_PROJECT_CONFIG=1` plus an explicit
+  `OPENCODE_CONFIG`, which stops the walk-up that otherwise pulls the operator's `.opencode`
+  directories, AGENTS.md files and skills into every run. That same flag hides the workdir's own
+  AGENTS.md, so the generated config pins it back as an **absolute** `instructions` path — a
+  relative one globs the operator's config directory instead (verified against opencode 1.18.21).
+  Known gap, not yet closed: the global `~/.config/opencode/opencode.json(c)` is still merged. It
+  loads *before* `OPENCODE_CONFIG`, so the generated file wins every shared key, but a global MCP
+  server or plugin would still enter the run. Redirecting `XDG_CONFIG_HOME` closes it, but a fresh
+  config directory makes opencode npm-install its own plugin dependencies into it on first use —
+  observed as a multi-minute stall mid-run. Closing this gap therefore needs a bench-owned config
+  directory provisioned once, offline thereafter; not done yet.
 - **Pinned model**: `--model` always explicit (`CFBENCH_MODEL`, default `sonnet`) — without it the
   CLI can pick different models between runs.
 - **Fresh workdir**: every run in a `mktemp -d`, fixture copied in, cleaned up afterwards. Zero state leakage.
@@ -89,7 +101,9 @@ Parity between the engines is enforced by the runner, not by the operator:
 |---|---|---|
 | model | `--model` (alias or ollama tag) | `-m provider/model` |
 | turn ceiling | `--max-turns $MAX_TURNS` | `agent.build.steps` in a generated `opencode.json` |
-| tool allowlist | `--allowedTools $ALLOWED_TOOLS` | `permission` in that same file; anything ungranted is `deny` |
+| tool allowlist | `--allowedTools $ALLOWED_TOOLS` | `permission` in that same file, as `{"*": "deny"}` **first** and the grants after it. Order is load-bearing: opencode resolves with `findLast` and strips any tool whose last matching rule is a wildcard deny, so a trailing catch-all deleted `bash` from the toolset outright. Residual asymmetry: opencode's `edit` key also ungates `write` and `apply_patch` |
+| isolation | `--setting-sources project` | `OPENCODE_DISABLE_PROJECT_CONFIG=1` + `OPENCODE_CONFIG` + an absolute `instructions` path (see Methodology) |
+| context window | the model's own | `provider.<p>.models.<tag>.limit` = the `num_ctx` from the preflight. A custom model without it gets `limit.context = 0`, which switches auto-compaction off |
 | ollama route | `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` | `provider.ollama.options.baseURL` (opencode ignores the `ANTHROPIC_*` vars) |
 
 Prerequisite for the opencode + ollama arm, once per machine:
