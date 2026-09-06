@@ -28,6 +28,8 @@ Pooling files is only valid when the fixture and CLI version match — see the c
 | `bench-20260718-145720.tsv` | js-rxjs-refresh-015 | A/B | 10–20 | 2.1.212 |
 | `bench-20260722-104241.tsv` | js-express-errors-010 | A/B/C/D | 9–10 | 2.1.217 |
 | `bench-20260722-161216.tsv` | js-express-errors-xl-014 | A/B/C | 10 | 2.1.217 |
+| `bench-20260905-213559.tsv` | js-express-errors-010 | A/B/C | 10 (C: 7) | 2.1.261 |
+| `bench-20260906-de.tsv` | js-express-errors-010 | D/E | 10 | 2.1.261 |
 
 Which file backs which headline claim:
 
@@ -69,3 +71,26 @@ harness versions; A and B always share one, so deltas hold even when absolute va
   `terminal_reason` alongside `success`.
 - **The two 07-22 files include variants C and D**, the placebo and the ContextForge-core arm; earlier
   files are A/B only, so a pooled A count can exceed the per-file N.
+
+## The 2026-09-06 re-measurement of the ContextForge arm (split across two files)
+
+`bench-20260905-213559.tsv` aborted on the circuit breaker after two consecutive `api_error`
+rows on C#8/#9, so arms D and E never ran in it. Rather than re-buy A/B/C, the missing arms were
+run separately into `bench-20260906-de.tsv`, same task and same fixture, with 10s pacing.
+
+**Do NOT pool these two files.** Claude Code auto-updated between them: A/B/C ran on **2.1.261**,
+D/E on **2.1.263**. That is exactly the case this README's own caveat excludes. Only the
+within-file comparisons are measurements — C vs A in the first file, E vs D in the second. Every
+CF-arm-versus-baseline delta crosses the version boundary and is suggestive at best. A code review
+caught this after the run was already recorded as poolable; the correction stands as the reason the
+matrix has to be re-run in one invocation. The analysis, with the clean and cross-version rows kept
+apart, lives in context-forge's `core/benchmarks/HYPOTHESES.md`, H1.
+
+Variant E (`configs/cf-full`) is new: the payload a consumer repo actually loads
+(~1945 tokens) rather than the compressed always-on extract variant D carries (~619 tokens).
+It is the user's global `CLAUDE.md` minus the `## Personal Infrastructure` section and the
+identity line — 941 characters cut, neither attributable to the plugin.
+
+Two D runs (#4, #7) failed the hidden assertion with `terminal_reason=completed` — the agent
+finished early (8 and 9 turns) and got it wrong, on a task where A, B, C and E all scored 100%.
+Fisher exact vs A: **p = 0.474**. At N=10 this is a flag to re-test, NOT a finding.
