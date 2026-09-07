@@ -29,7 +29,8 @@ Pooling files is only valid when the fixture and CLI version match — see the c
 | `bench-20260722-104241.tsv` | js-express-errors-010 | A/B/C/D | 9–10 | 2.1.217 |
 | `bench-20260722-161216.tsv` | js-express-errors-xl-014 | A/B/C | 10 | 2.1.217 |
 | `bench-20260905-213559.tsv` | js-express-errors-010 | A/B/C | 10 (C: 7) | 2.1.261 |
-| `bench-20260906-de.tsv` | js-express-errors-010 | D/E | 10 | 2.1.261 |
+| `bench-20260906-de.tsv` | js-express-errors-010 | D/E | 10 | 2.1.263 |
+| `bench-20260906-081546.tsv` | js-express-errors-010 | A/B/C/D/E | 10 | 2.1.263 |
 
 Which file backs which headline claim:
 
@@ -42,6 +43,7 @@ Which file backs which headline claim:
 | the contested-prior rule's control test: A 40% vs B 100% | `bench-20260718-145720.tsv` |
 | canonical conventions are cost-only, not success | `bench-20260718-101708.tsv` |
 | a 14b local model's competence boundary: 3/3 on one-bug-with-a-failing-test, 0/3 on conflicting-signal | `local-arm-20260818-230602.tsv` |
+| the ContextForge payload costs +15.9% at equal success (E vs A, one CLI version) | `bench-20260906-081546.tsv` |
 
 ## Reading the columns
 
@@ -93,4 +95,39 @@ identity line — 941 characters cut, neither attributable to the plugin.
 
 Two D runs (#4, #7) failed the hidden assertion with `terminal_reason=completed` — the agent
 finished early (8 and 9 turns) and got it wrong, on a task where A, B, C and E all scored 100%.
-Fisher exact vs A: **p = 0.474**. At N=10 this is a flag to re-test, NOT a finding.
+Fisher exact vs A: **p = 0.474**. At N=10 this is a flag to re-test, NOT a finding. It was re-tested
+the next morning and got worse — see below.
+
+## The 2026-09-06 clean re-run — `bench-20260906-081546.tsv`
+
+The re-run the block above called mandatory: **all five arms, N=10, one `run-bench.sh` invocation,
+`DISABLE_AUTOUPDATER=1` exported for the whole run**. 50 rows, 0 invalid, column 16 holds exactly
+one distinct value (`2.1.263`), $5.22. This file supersedes both 2026-09-05/06 files for every
+CF-versus-baseline claim; they stay for the record and for the D/E arms pooled below.
+
+| variant | config | tokens | succ | med cost | Δ vs A | p |
+|---|---|---|---|---|---|---|
+| A | none | 0 | 10/10 | 0.0979 | — | — |
+| B | task knowledge | — | 10/10 | 0.0939 | −4.1% | 0.017 |
+| C | generic placebo | ~46 | 10/10 | 0.1066 | +8.9% | 0.0013 |
+| D | `cf-core` | ~619 | **6/10** | 0.1068 | +9.1% | 0.0046 |
+| E | `cf-full` | ~1945 | 10/10 | 0.1134 | **+15.9%** | 0.00018 |
+
+E vs C: +6.4%, p = 0.0028. Turns are 10 in every arm except C (11).
+
+Three things this file settles, and one it does not:
+
+- **The real ContextForge payload costs +15.9% against a bare repo at identical success.** No
+  version drift, no cross-file pooling, single invocation.
+- **Most of that is not ContextForge.** C vs A is +8.9% — the price of any `CLAUDE.md` existing,
+  now replicated three times (+8.2% July, +9.6% on 09-05, +8.9% here). CF's own share is the
+  +6.4% of E vs C.
+- **Only encoded task knowledge is cheaper than bare** (B, −4.1%, third replication).
+- **Not settled: why D fails.** D is 6/10 here and 8/10 in `bench-20260906-de.tsv`; both ran on
+  2.1.263, so they pool: **14/20**, against A's 10/10 on the same version, Fisher p = 0.074 —
+  directional, not significant. All six failures ended `completed` in 8–10 turns.
+
+Pooling note for D and E: these two files may be pooled with each other (same CLI version, same
+task, same configs) and with nothing else. Doing so shows the E-vs-D cost gap is an artefact of D's
+failures being cheap — D's 14 *successful* runs cost a median $0.1130 against E's $0.1134,
+**+0.4%, p = 0.278**. A 1326-token config difference buys no measurable cost difference.

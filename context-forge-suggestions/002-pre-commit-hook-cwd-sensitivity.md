@@ -1,6 +1,8 @@
 # Suggestion CF-002: the pre-commit-review marker is sensitive to the session cwd
 
-Status: PROPOSAL — a bug found in practice on 2026-07-16 while working on cf-bench.
+Status: CLOSED 2026-09-06 — fixed in context-forge (hooks/pre-commit-review.sh), with negative tests.
+Originally: a bug found in practice on 2026-07-16 while working on cf-bench. Two further variants of the
+same root cause (session repo vs committed repo; the dead SKIP_REVIEW bypass) were fixed 2026-09-06.
 
 ## Problem
 

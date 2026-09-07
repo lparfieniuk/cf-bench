@@ -1,4 +1,4 @@
-# cf-bench roadmap (as of 2026-07-18, after the rxjs-pack expansion and the contested-prior rule)
+# cf-bench roadmap (as of 2026-09-06, after the engine/provider arms and the C/D/E variant matrix)
 
 Thesis: **we do not sell rules — we sell proof that a config works.**
 Path: OSS harness → leaderboard/publications → paid regression-watch + audits.
@@ -42,6 +42,29 @@ Path: OSS harness → leaderboard/publications → paid regression-watch + audit
   with no company context answer unambiguously?" YES → do not build it. Confirmed by control task 015.
 - takeUntil/teardown deliberately rejected: behaviourally indistinguishable (unsubscribe ≡ takeUntil)
 
+## ✅ Delivered 2026-08 → 2026-09 (engine + provider arms, out of roadmap order)
+
+Both were built ahead of their place in the plan — they were cheap once the variant mechanism existed,
+and they answer "is this a Claude Code artefact?" before publication rather than after.
+
+- **Engine arm — opencode** (`CFBENCH_AGENT=opencode`). Same task files, same fixtures, same checks;
+  the runner translates the three knobs (turn ceiling, tool allowlist, isolation) into a generated
+  `opencode.json`. Details and the residual asymmetries in `cf-bench/README.md`. Two gotchas are load-
+  bearing and documented there: permission rules resolve with `findLast`, so the catch-all `{"*":"deny"}`
+  must come FIRST or opencode strips `bash` from the toolset; and `instructions` must be an absolute
+  path or variant B ships no config at all.
+- **Provider arm — local Ollama model** (`PROVIDER_<V>="ollama:<tag>"`, wired on
+  `ts-fix-discount-001`, `js-config-lies-008`, `js-rxjs-catch-011`). A provider swap of B: same config,
+  same check, same ceiling, so Δ(D−B) is the provider effect alone. Preflight refuses a run when the
+  server is down or `num_ctx` is under 32768 — an unpinned window degrades silently. Results:
+  `results/local-arm-20260818-230602.tsv`. Caveat: `cost_usd` on that arm is notional (Anthropic
+  prices applied to local tokens), so read `turns` and `success`, never the dollar column.
+- **Variant C/D/E measured** on `js-express-errors-010` (2026-09-05/06). C = placebo config,
+  D = ContextForge always-on core (~619 tok), E = the payload a consumer repo really loads (~1945 tok).
+  Two clean results: C vs A costs **+9.6%** (p=0.001) — merely having a `CLAUDE.md` is not free; and
+  E vs D is **+1.9%, not significant** (p=0.186) — payload SIZE is not a cost driver. Everything
+  crossing the 2.1.261 → 2.1.263 CLI boundary was discarded, not interpreted.
+
 ## 🔜 Next up (recommended order)
 
 1. **Decision on 012** (retired vs redesign as contested) plus possibly 1–2 tasks passing the
@@ -49,7 +72,11 @@ Path: OSS harness → leaderboard/publications → paid regression-watch + audit
    retry-fetch policy)
 2. **Freeze the set → final N=10 matrix including variant C** across every discriminating task plus C
    on the flagships, in one fresh matrix (consistent CLI version); estimate ~$30–40 [BUDGET — approval
-   before starting]
+   before starting]. STILL OPEN since July. The 2026-09-05/06 attempt spent $4.93 and half of it was
+   voided because Claude Code auto-updated mid-matrix; arms measured under different `cli_version`
+   values may never be pooled. Precondition for the next attempt: `DISABLE_AUTOUPDATER=1` exported for
+   the whole run, and the whole matrix in ONE `run-bench.sh` invocation — topping up a missing arm
+   separately is exactly what created the version split.
 3. **Draft review** + decision: keep the config-lies section in the article or split it into its own post
 4. **Open-source prep** (a precondition for Show HN): license, English README, raw TSVs, a reproduction
    script; held-out decision (keep some tasks private — the SWE-bench Pro pattern)
@@ -64,8 +91,11 @@ Path: OSS harness → leaderboard/publications → paid regression-watch + audit
   top-2 on the target list)
 - **Python-api-pack**: Pydantic 1→2, FastAPI, SQLAlchemy 2.0 (pip --target = vendorable; the classic
   deprecated-API trap — models cling to old patterns, >50% of failures are wrong API usage)
-- **Cross-agent**: a Codex CLI / Cursor CLI adapter; requires an `agent adapter` abstraction in the runner
-- **Multi-model**: haiku/opus — does cheap intelligence change the taxonomy of traps?
+- **Cross-agent, remainder**: Codex CLI / Cursor CLI. The `agent adapter` abstraction this needed
+  already exists — it was built for the opencode arm above, so each further engine is now an adapter,
+  not a refactor.
+- **Multi-model, remainder**: haiku/opus — does cheap intelligence change the taxonomy of traps? The
+  routing mechanism is done (the Ollama arm proved the provider swap); what is missing is the run.
 - More classes: stale docs (the README lies), dead code paths, LangChain version-pinning
   (the regression-watch story)
 
@@ -79,7 +109,13 @@ Path: OSS harness → leaderboard/publications → paid regression-watch + audit
 ## 🔧 For context-forge (queue in context-forge-suggestions/)
 
 - CF-001: a `/research-scan` skill (continuous research)
-- CF-002: fix the pre-commit-review hook (hash the git toplevel, not the cwd; 2 documented cases)
+- CF-002: fix the pre-commit-review hook (hash the git toplevel, not the cwd; 2 documented cases) —
+  DONE in its original form, and reopened/closed again 2026-09-06 in two further shapes: the marker
+  was keyed to the SESSION's repo rather than the repo being committed, and the advertised
+  `SKIP_REVIEW=1 git commit` bypass never reached the hook (a PreToolUse hook is a separate process,
+  spawned before the command). A third bug surfaced while testing: `git -C <dir> commit` did not match
+  the commit detector at all, so the gate silently did not fire. All three now carry negative tests
+  in `context-forge/scripts/hooks.test.ts`, mutation-checked.
 
 ## Invariants
 
