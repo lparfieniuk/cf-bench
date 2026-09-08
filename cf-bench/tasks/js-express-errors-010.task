@@ -12,10 +12,14 @@ HIDDEN="js-express-errors-hidden"
 # C = generic placebo (any CLAUDE.md present); D = ContextForge always-on core (configs/cf-core),
 # both with ZERO task knowledge. Honest read: D vs C isolates CF's efficiency rules from mere
 # config presence. Expected D≈C≈A on success, D<C on cost/turns iff the rules pay for themselves.
-VARIANTS="A B C D E"
+VARIANTS="A B C D E F"
 CONFIG_C="generic"
 CONFIG_D="cf-core"
 CONFIG_E="cf-full"   # the payload a consumer repo really loads (~1945 tok vs cf-core ~619)
+# F = cf-core plus rule 005 (the progressive-disclosure chain 002 assumes exists) and the
+# 015/019 verify-before-concluding mandate (~908 tok). D lost 6/20 runs a bare repo won;
+# F tests whether the missing substitute and the missing verification are why.
+CONFIG_F="cf-core-plus"
 MAX_TURNS="12"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
 CHECK="check.sh"

@@ -19,6 +19,15 @@ ERR_STREAK=0
 for TASK_FILE in "$BENCH_ROOT"/tasks/$TASK_GLOB; do
   # Per-task variant set: VARIANTS="A B C" in the .task adds e.g. a placebo config arm.
   TASK_VARIANTS=$( (VARIANTS="A B"; source "$TASK_FILE"; echo "$VARIANTS") )
+  # CFBENCH_VARIANTS runs a SUBSET of the task's arms. Read the warning before using it:
+  # arms from different invocations may only be compared when `cli_version` matches, and
+  # topping up a missing arm separately is exactly what voided the 2026-09-05/06 matrix
+  # ($4.93). Legitimate use is adding a NEW arm to compare against arms already measured
+  # on the CLI version you are still running -- check `claude --version` before and after.
+  # Plain `if`, not `[ ... ] && ...`: under `set -e` a false test would abort the matrix.
+  if [ -n "${CFBENCH_VARIANTS:-}" ]; then
+    TASK_VARIANTS="$CFBENCH_VARIANTS"
+  fi
   for VARIANT in $TASK_VARIANTS; do
     for i in $(seq 1 "$REPEATS"); do
       echo ">> $(basename "$TASK_FILE") $VARIANT #$i" >&2

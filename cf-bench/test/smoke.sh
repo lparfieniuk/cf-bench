@@ -80,6 +80,15 @@ echo "$ROW5" | cut -f6 | grep -qx 0 || { echo "FAIL: variant C run broken"; FAIL
 mkdir -p "$MOCK_DIR/api"
 echo '{"version":"mock"}' > "$MOCK_DIR/api/version"
 PORT=59431
+# A leaked server from an interrupted earlier run keeps this fixed port and answers 404
+# to everything, so the new server never binds and the failure surfaces as
+# "ollama is not reachable" -- a preflight error that looks like a product bug and is not.
+# Cost of finding that out the hard way, 2026-09-08: ~10 minutes. Fail loudly instead.
+if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "FATAL: port $PORT is already in use -- most likely a leaked http.server from an" >&2
+  echo "interrupted smoke run. Free it first:  kill \$(lsof -t -iTCP:$PORT -sTCP:LISTEN)" >&2
+  exit 2
+fi
 python3 -m http.server "$PORT" --directory "$MOCK_DIR" >/dev/null 2>&1 &
 HTTP_PID=$!
 disown "$HTTP_PID" 2>/dev/null || true   # otherwise bash prints "Terminated" at exit

@@ -31,6 +31,7 @@ Pooling files is only valid when the fixture and CLI version match — see the c
 | `bench-20260905-213559.tsv` | js-express-errors-010 | A/B/C | 10 (C: 7) | 2.1.261 |
 | `bench-20260906-de.tsv` | js-express-errors-010 | D/E | 10 | 2.1.263 |
 | `bench-20260906-081546.tsv` | js-express-errors-010 | A/B/C/D/E | 10 | 2.1.263 |
+| `bench-20260908-144052.tsv` | js-express-errors-010 | F only | 10 | 2.1.263 |
 
 Which file backs which headline claim:
 
@@ -131,3 +132,26 @@ Pooling note for D and E: these two files may be pooled with each other (same CL
 task, same configs) and with nothing else. Doing so shows the E-vs-D cost gap is an artefact of D's
 failures being cheap — D's 14 *successful* runs cost a median $0.1130 against E's $0.1134,
 **+0.4%, p = 0.278**. A 1326-token config difference buys no measurable cost difference.
+
+## The 2026-09-08 variant F run — `bench-20260908-144052.tsv`
+
+A single arm, run with `CFBENCH_VARIANTS="F"` against arms already measured on the SAME CLI version
+(2.1.263, checked before and after). That is the only legitimate use of a subset run: comparing a NEW
+arm to existing arms on one version. It is NOT permission to top up a missing arm later — that is what
+voided the 2026-09-05/06 matrix.
+
+F = `configs/cf-core-plus`: `cf-core` plus rule 005's progressive-disclosure chain and the 015/019
+verify-before-concluding mandate, ~908 tokens. It tests whether D's missing substitute and missing
+verification are why D loses runs. N=10, 9/10, median $0.1202, 11 turns, $1.24.
+
+- **Success question not settled.** F 9/10 vs D 14/20 is Fisher p = 0.37; `tools/power-analysis.py`
+  gives a 70%-vs-100% effect a power of 0.15 at N=10. Directionally right, statistically nothing.
+- **Cost question settled, against the fix.** F is the most expensive arm measured: +22.8% vs bare
+  (p < 0.001), +9.6% vs D (p = 0.048), indistinguishable from E (+6.0%, p = 0.692). Its nine
+  successful runs alone median $0.1181 — still the highest, so the failure is not the cause.
+- **Mechanism runs opposite to intent.** F's median `cache_read` is 216,559, the highest of any arm
+  and 60% above bare A's 135,587, and its turn median rises to 11. Rules added to make reading
+  cheaper made the agent read more.
+
+`bench-20260908-144052.tsv` pools with `bench-20260906-081546.tsv` and `bench-20260906-de.tsv`:
+same task, same fixture, same CLI version.
