@@ -15,10 +15,15 @@ HIDDEN="js-express-errors-hidden"
 # On 010 (9 files) D was +6.9% cost vs A (p=0.016): the ~940-token rule tax outweighed the gain.
 # Here (142 files, 120 noise) discovery discipline has room to pay — B already shows -28.6% at
 # this scale vs -3.2% on the small twin. Tests: is CF's value scale-dependent?
-VARIANTS="A B C D E"
+VARIANTS="A B C D E F"
 CONFIG_C="generic"
 CONFIG_D="cf-core"
 CONFIG_E="cf-full"   # the payload a consumer repo really loads (~1945 tok vs cf-core ~619)
+# F = cf-core plus rule 005's progressive-disclosure chain and the 015/019 verification
+# mandate (~908 tok). On the small twin (010) F was the MOST expensive arm (+22.8% vs bare)
+# and drove cache_read to the highest of any arm -- rules meant to cut reading increased it.
+# 142 files is where that discipline is supposed to pay off instead. Same config, both scales.
+CONFIG_F="cf-core-plus"
 MAX_TURNS="20"
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Bash(node:*),Bash(npm:*)"
 CHECK="check.sh"

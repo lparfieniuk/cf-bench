@@ -12,7 +12,11 @@ cat > "$MOCK_DIR/claude-mock" <<'EOF'
 # Mock agent: apply the correct fix in cwd, print canned result JSON.
 sed -i '' -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js 2>/dev/null \
   || sed -i -e 's/(1 - percent)/(1 - percent \/ 100)/' src/price.js
-echo '{"type":"result","subtype":"success","num_turns":4,"duration_ms":12345,"total_cost_usd":0.0421,"terminal_reason":"completed","session_id":"mock-session","usage":{"input_tokens":10,"cache_creation_input_tokens":8000,"cache_read_input_tokens":15000,"output_tokens":420}}'
+# `is_error` and `api_error_status` are present on a REAL successful result too (false
+# and null). The mock has to carry them, otherwise the "a healthy run writes no
+# diagnostics" assertion below passes against any condition, however broad -- which is
+# how a condition matching the field NAME `api_error_status` shipped on 2026-09-09.
+echo '{"type":"result","subtype":"success","is_error":false,"api_error_status":null,"num_turns":4,"duration_ms":12345,"total_cost_usd":0.0421,"terminal_reason":"completed","session_id":"mock-session","usage":{"input_tokens":10,"cache_creation_input_tokens":8000,"cache_read_input_tokens":15000,"output_tokens":420}}'
 EOF
 chmod +x "$MOCK_DIR/claude-mock"
 
@@ -35,6 +39,36 @@ chmod +x "$MOCK_DIR/claude-noop"
 ROW2=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-noop" \
   bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" A 1)
 echo "$ROW2" | cut -f6 | grep -qx 0                       || { echo "FAIL: noop agent should yield success=0"; FAIL=1; }
+
+# An invalid run must leave a durable trace. `claude --output-format json` reports an
+# API error inside the result JSON on STDOUT and leaves stderr empty, so a diagnostic
+# that only tails stderr prints nothing and the mktemp cleanup takes the evidence with
+# it. That is exactly what happened to the 2026-09-08 XL matrix: the halt was real, the
+# cause was never captured. Assert the files land.
+cat > "$MOCK_DIR/claude-apierror" <<'EOF'
+#!/usr/bin/env bash
+echo '{"type":"result","is_error":true,"terminal_reason":"api_error","total_cost_usd":0,"num_turns":0,"session_id":"mock-err","usage":{}}'
+exit 1
+EOF
+chmod +x "$MOCK_DIR/claude-apierror"
+DIAG_BEFORE=$(ls "$BENCH_ROOT"/results/diagnostics 2>/dev/null | wc -l | tr -d ' ')
+ROW_ERR=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-apierror"   bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" A 99 2>/dev/null)
+echo "$ROW_ERR" | cut -f6 | grep -qx ''                   || { echo "FAIL: api_error run must leave success empty (invalid, not failed)"; FAIL=1; }
+DIAG_AFTER=$(ls "$BENCH_ROOT"/results/diagnostics 2>/dev/null | wc -l | tr -d ' ')
+[ "$DIAG_AFTER" -gt "$DIAG_BEFORE" ]                      || { echo "FAIL: invalid run left no diagnostics file"; FAIL=1; }
+ls "$BENCH_ROOT"/results/diagnostics/ts-fix-discount-001-A-99-*.result.json >/dev/null 2>&1                                                           || { echo "FAIL: diagnostics missing the result JSON, where the API error actually lives"; FAIL=1; }
+rm -f "$BENCH_ROOT"/results/diagnostics/ts-fix-discount-001-A-99-*
+
+# ...and the mirror assertion, which is the one that actually pins the CONDITION rather
+# than the block's existence: a HEALTHY run must leave no diagnostics at all. Without it
+# the check above passes even when the invalid-run test matches everything, which is
+# exactly the bug that shipped on 2026-09-09.
+DIAG_BEFORE_OK=$(ls "$BENCH_ROOT"/results/diagnostics 2>/dev/null | wc -l | tr -d ' ')
+ROW_OK=$(CFBENCH_CLAUDE_BIN="$MOCK_DIR/claude-mock" \
+  bash "$BENCH_ROOT/runner/run-task.sh" "$BENCH_ROOT/tasks/ts-fix-discount-001.task" A 98 2>/dev/null)
+DIAG_AFTER_OK=$(ls "$BENCH_ROOT"/results/diagnostics 2>/dev/null | wc -l | tr -d ' ')
+[ "$DIAG_AFTER_OK" -eq "$DIAG_BEFORE_OK" ]                || { echo "FAIL: a healthy run wrote diagnostics — the invalid-run condition matches everything"; FAIL=1; }
+rm -f "$BENCH_ROOT"/results/diagnostics/ts-fix-discount-001-A-98-*
 
 # Hidden-assertion task: agent passing VISIBLE tests but violating the hidden
 # policy (multiplicative stacking, no cap) must yield success=0.
@@ -314,6 +348,11 @@ CFBENCH_AGENT=opencode CFBENCH_OPENCODE_BIN="$MOCK_DIR/opencode-mock" \
 RC_OC=$?
 set -e
 [ "$RC_OC" -eq 2 ] || { echo "FAIL: opencode without CFBENCH_OPENCODE_MODEL should exit 2, got $RC_OC"; FAIL=1; }
+
+# The invalid-run arms above (the ollama preflight, the error stream) legitimately write
+# diagnostics. Clean them here, at the END: a suite that grows a directory on every run is
+# its own small leak. Placed early, this ran before the arms that create the files.
+rm -f "$BENCH_ROOT"/results/diagnostics/ts-fix-discount-001-D-1-*
 
 # Outcome validity: every task must be broken pre-oracle and solvable post-oracle.
 bash "$BENCH_ROOT/runner/validate-tasks.sh" || FAIL=1

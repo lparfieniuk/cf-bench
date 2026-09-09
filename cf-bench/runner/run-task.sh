@@ -226,10 +226,34 @@ fi
 WALL_MS_END="$(python3 -c 'import time; print(int(time.time() * 1000))')"
 
 # Diagnose invalid runs: without this the mktemp cleanup eats the only error trace.
+#
+# Printing a tail of the stderr log is NOT enough and cost a real diagnosis on
+# 2026-09-08: `claude --output-format json` reports an API error inside the result
+# JSON on STDOUT and leaves stderr empty, so the halt printed "stderr tail:" followed
+# by nothing and the actual message was gone with the mktemp dir. Persist BOTH streams
+# next to the results, and print the head of the JSON -- that is where the error lives.
 ENGINE_EXIT="${ENGINE_EXIT:-$CLAUDE_EXIT}"
+# Plain `if`, not `[ ... ] && assign`: under `set -e` a false test makes the whole
+# script exit 1, which would turn a clean run into a phantom failure.
+RUN_INVALID=0
 if [ "$ENGINE_EXIT" -ne 0 ]; then
-  echo "engine ($AGENT) exit $ENGINE_EXIT; stderr tail:" >&2
-  tail -3 "$WORK/.cfbench-stderr.log" >&2 || true
+  RUN_INVALID=1
+fi
+# Match the VALUE, never the field name. `api_error` alone matched `api_error_status`,
+# a field claude emits on EVERY result (null on success), so every healthy run wrote a
+# diagnostics pair -- 58 files for 26 good runs before this was caught on 2026-09-09.
+if rg -q '"is_error"[[:space:]]*:[[:space:]]*true|"terminal_reason"[[:space:]]*:[[:space:]]*"api_error"|"api_error_status"[[:space:]]*:[[:space:]]*[0-9]' "$RESULT_JSON" 2>/dev/null; then
+  RUN_INVALID=1
+fi
+if [ "$RUN_INVALID" -eq 1 ]; then
+  DIAG_DIR="$BENCH_ROOT/results/diagnostics"
+  mkdir -p "$DIAG_DIR"
+  DIAG_BASE="$DIAG_DIR/${TASK_ID}-${VARIANT}-${REPEAT}-$(date +%Y%m%d-%H%M%S)"
+  tail -50 "$WORK/.cfbench-stderr.log" > "$DIAG_BASE.stderr.log" 2>/dev/null || true
+  head -c 4000 "$RESULT_JSON" > "$DIAG_BASE.result.json" 2>/dev/null || true
+  echo "engine ($AGENT) exit $ENGINE_EXIT -- diagnostics: $DIAG_BASE.{stderr.log,result.json}" >&2
+  echo "  result head: $(head -c 300 "$RESULT_JSON" 2>/dev/null)" >&2
+  echo "  stderr tail: $(tail -3 "$WORK/.cfbench-stderr.log" 2>/dev/null)" >&2
 fi
 
 # Hidden assertions: spec that lives outside the repo (like team knowledge).

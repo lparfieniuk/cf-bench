@@ -33,6 +33,15 @@ for TASK_FILE in "$BENCH_ROOT"/tasks/$TASK_GLOB; do
       echo ">> $(basename "$TASK_FILE") $VARIANT #$i" >&2
       ROW=$(bash "$BENCH_ROOT/runner/run-task.sh" "$TASK_FILE" "$VARIANT" "$i")
       echo "$ROW" >> "$OUT"
+      # CFBENCH_SLEEP paces the matrix. Default 0 keeps every historical run reproducible.
+      # Reason it exists: the 2026-09-08 XL matrix halted on two consecutive api_error rows
+      # after 37 back-to-back runs of a 142-file fixture -- roughly 3x the per-run load of
+      # the small twin, which completed 50 runs untouched. Rate limiting is the leading
+      # HYPOTHESIS for that halt, not a established cause; pacing is a cheap mitigation that
+      # costs wall time only.
+      if [ "${CFBENCH_SLEEP:-0}" != "0" ]; then
+        sleep "$CFBENCH_SLEEP"
+      fi
       if [ -z "$(echo "$ROW" | cut -f6)" ]; then
         ERR_STREAK=$((ERR_STREAK + 1))
         if [ "$ERR_STREAK" -ge 2 ]; then

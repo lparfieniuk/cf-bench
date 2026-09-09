@@ -32,6 +32,8 @@ Pooling files is only valid when the fixture and CLI version match — see the c
 | `bench-20260906-de.tsv` | js-express-errors-010 | D/E | 10 | 2.1.263 |
 | `bench-20260906-081546.tsv` | js-express-errors-010 | A/B/C/D/E | 10 | 2.1.263 |
 | `bench-20260908-144052.tsv` | js-express-errors-010 | F only | 10 | 2.1.263 |
+| `bench-20260908-211523.tsv` | js-express-errors-xl-014 | A/B/C/D | 10 (D: 7, 2 invalid) | 2.1.263 |
+| `bench-20260909-125059.tsv` | js-express-errors-xl-014 | D/E/F | 10 | 2.1.263 (pinned binary) |
 
 Which file backs which headline claim:
 
@@ -44,7 +46,8 @@ Which file backs which headline claim:
 | the contested-prior rule's control test: A 40% vs B 100% | `bench-20260718-145720.tsv` |
 | canonical conventions are cost-only, not success | `bench-20260718-101708.tsv` |
 | a 14b local model's competence boundary: 3/3 on one-bug-with-a-failing-test, 0/3 on conflicting-signal | `local-arm-20260818-230602.tsv` |
-| the ContextForge payload costs +15.9% at equal success (E vs A, one CLI version) | `bench-20260906-081546.tsv` |
+| the ContextForge payload costs +15.9% at equal success (E vs A, 9 files) | `bench-20260906-081546.tsv` |
+| every ContextForge arm reverses sign at 142 files (D +9.1% to −28.7%) | `bench-20260908-211523.tsv` + `bench-20260909-125059.tsv` |
 
 ## Reading the columns
 
@@ -155,3 +158,40 @@ verification are why D loses runs. N=10, 9/10, median $0.1202, 11 turns, $1.24.
 
 `bench-20260908-144052.tsv` pools with `bench-20260906-081546.tsv` and `bench-20260906-de.tsv`:
 same task, same fixture, same CLI version.
+
+## The 2026-09-08/09 XL matrix — where the sign flips
+
+Two files, one measurement. `bench-20260908-211523.tsv` completed A, B, C at N=10 and then halted:
+two consecutive `api_error` rows on D#6 and D#7 tripped the circuit breaker after 37 back-to-back
+runs of a 142-file fixture. `bench-20260909-125059.tsv` carries D, E and F.
+
+**These two files DO pool** — same task, same fixture, same configs, and the same `cli_version` in
+every row. That last part took a deliberate step: Claude Code auto-updated to 2.1.266 between the
+two runs, so the second was run against the **pinned 2.1.263 binary** still on disk
+(`CFBENCH_CLAUDE_BIN=~/.local/share/claude/versions/2.1.263`). Without the pin this would have been
+the third matrix voided by version drift. Total $9.67.
+
+| arm | 9 files (010) | 142 files (xl-014) |
+|---|---|---|
+| B task knowledge | −4.1% (p=0.017) | **−27.6%** (p=0.0005) |
+| C placebo | **+8.9%** (p=0.0013) | +4.9% (ns) |
+| D `cf-core` | **+9.1%** (p=0.0046) | **−28.7%** (p=0.0001) |
+| E `cf-full` | **+15.9%** (p=0.00018) | −14.5% (ns) |
+| F `cf-core-plus` | **+22.8%** (p<0.001) | **−17.3%** (p=0.028) |
+
+Every config arm reverses sign. Same files, same trap, same model, same CLI version — the variable
+is repository size. Two things this does NOT say: E's saving at scale is **not** significant
+(p=0.29), so its penalty disappears rather than a saving appearing; and D remains the least reliable
+arm at both scales (14/20 small, 12/15 XL) while being the cheapest at scale.
+
+Success rates at XL: A, B, C each 10/10; D 12/15; E and F each 9/10.
+
+### Diagnostics, added after this matrix cost a diagnosis
+
+The 2026-09-08 halt was never root-caused: `run-task.sh` printed a tail of stderr, but
+`claude --output-format json` reports API errors inside the result JSON on **stdout**, so the
+message went with the mktemp directory. Invalid runs now persist both streams under
+`results/diagnostics/`. The first version of that condition matched the field NAME
+`api_error_status` — present and null on every healthy result — and wrote diagnostics for all 26
+good runs of the follow-up matrix. Both directions are now asserted in `test/smoke.sh`: an invalid
+run must leave the result JSON, and a healthy run must leave nothing.
